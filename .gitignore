@@ -6,3 +6,6 @@ models/
 
 # Bytecode Python (demo/)
 __pycache__/
+
+# Dépendances de fabrication du deck
+node_modules/

@@ -1,0 +1,17 @@
+{
+  "name": "Local Terminal",
+  "colors": {
+    "dk1": "1B2437",
+    "lt1": "FFFFFF",
+    "dk2": "5A6B85",
+    "lt2": "EAF0F6",
+    "accent1": "02C39A",
+    "accent2": "028090",
+    "accent3": "F5A623",
+    "accent4": "1E2761",
+    "accent5": "94A7BF",
+    "accent6": "BFEFE3",
+    "hlink": "028090",
+    "folHlink": "5A6B85"
+  }
+}

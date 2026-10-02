@@ -97,8 +97,9 @@ llama-bench -m /models/LFM2.5-8B-A1B-UD-Q5_K_M/LFM2.5-8B-A1B-UD-Q5_K_M.gguf \
 
 « **LLM & développement agentique — tout ça tourne chez vous** » :
 
-- [`presentation/`](presentation/) — le plan détaillé de la session (`PLAN.md`) et
-  les scripts des lives (`SCENARIOS.md`) ;
+- [`presentation/`](presentation/) — le deck **`llm-agentique-local.pptx`** (+ son PDF),
+  son script de fabrication (`build_deck.js`), le plan détaillé de la session
+  (`PLAN.md`) et les scripts des lives (`SCENARIOS.md`) ;
 - [`demo/`](demo/) — un mini-projet Python avec un bug volontaire : la démo
   agentique (l'agent d'OpenCode doit rendre les tests verts) ;
 - [`.opencode/skills/explain-file/`](.opencode/skills/explain-file/SKILL.md) —
