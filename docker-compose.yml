@@ -10,10 +10,9 @@
 services:
   llama:
     image: llama-cpp-local:latest
-    build:
-      context: .
-      args:
-        LLAMA_VERSION: v0.5.0
+    # Source unique de la version : ARG LLAMA_VERSION dans le Dockerfile.
+    # Upgrade ponctuel : docker compose build --build-arg LLAMA_VERSION=<tag>
+    build: .
     container_name: llama
     # Réseau partagé avec l'hôte : llama-server sans --host (boucle locale)
     # n'est joignable que depuis cette machine ; avec --host 0.0.0.0 il est
