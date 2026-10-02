@@ -1,0 +1,5 @@
+# Espace de modèles : hors du repo (des Go de poids GGUF)
+models/
+
+# Clé Hugging Face locale
+.env

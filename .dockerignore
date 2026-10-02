@@ -1,0 +1,3 @@
+# Ne rien envoyer au démon de build : tout vient des étapes du Dockerfile.
+# Surtout models/ (des Go) et .env (secret).
+*
