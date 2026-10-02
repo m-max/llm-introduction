@@ -7,6 +7,19 @@ quantifiés jusqu'à ~20 Go). Les modèles vivent dans `models/`
 toujours téléchargés **à plat** avec `--local-dir` (un dossier par modèle,
 lisible et supprimable à la main — pas la structure opaque du cache HF).
 
+## Démarrer en 3 commandes
+
+```bash
+docker compose build                                # 1. construire la boîte à outils
+docker compose run --rm llama bash                  # 2. y entrer
+hf download unsloth/LFM2.5-8B-A1B-GGUF \            # 3. télécharger un modèle (~6 Go)
+    --include "LFM2.5-8B-A1B-UD-Q5_K_M.gguf*" \
+    --local-dir /models/LFM2.5-8B-A1B-UD-Q5_K_M
+```
+
+Puis `llama-cli -m /models/LFM2.5-8B-A1B-UD-Q5_K_M/LFM2.5-8B-A1B-UD-Q5_K_M.gguf`
+et vous discutez avec un LLM sur votre CPU. La suite détaille chaque étape.
+
 ## 1. Construire l'image
 
 ```bash
@@ -35,9 +48,9 @@ Le dossier de travail est `/models` ; sont disponibles : `hf`, `llama-cli`,
 ## 3. Télécharger un modèle (depuis le conteneur)
 
 ```bash
-hf download bartowski/Qwen2.5-14B-Instruct-GGUF \
-    --include "*Q4_K_M*" \
-    --local-dir /models/Qwen2.5-14B-Instruct-Q4_K_M
+hf download unsloth/LFM2.5-8B-A1B-GGUF \
+    --include "LFM2.5-8B-A1B-UD-Q5_K_M.gguf*" \
+    --local-dir /models/LFM2.5-8B-A1B-UD-Q5_K_M
 ```
 
 Le modèle apparaît aussitôt à plat dans `models/` côté hôte, avec son nom
@@ -50,12 +63,12 @@ Toujours dans le conteneur :
 
 ```bash
 # Dialogue interactif
-llama-cli -m /models/Qwen2.5-14B-Instruct-Q4_K_M/Qwen2.5-14B-Instruct-Q4_K_M.gguf
+llama-cli -m /models/LFM2.5-8B-A1B-UD-Q5_K_M/LFM2.5-8B-A1B-UD-Q5_K_M.gguf
 ```
 
 ```bash
 # Serveur (API compatible OpenAI + docs sur / ) — cette machine uniquement
-llama-server -m /models/Qwen2.5-14B-Instruct-Q4_K_M/Qwen2.5-14B-Instruct-Q4_K_M.gguf \
+llama-server -m /models/LFM2.5-8B-A1B-UD-Q5_K_M/LFM2.5-8B-A1B-UD-Q5_K_M.gguf \
     -c 8192
 ```
 
@@ -76,7 +89,19 @@ hyperthreading + E-cores compris). Pour trancher sur votre puce et votre
 modèle, mesurez avec `llama-bench` :
 
 ```bash
-llama-bench -m /models/Qwen2.5-14B-Instruct-Q4_K_M/Qwen2.5-14B-Instruct-Q4_K_M.gguf \
+llama-bench -m /models/LFM2.5-8B-A1B-UD-Q5_K_M/LFM2.5-8B-A1B-UD-Q5_K_M.gguf \
     -pg 512,256 -t 8,14,20
 ```
+
+## Ce repo sert aussi de support à une présentation
+
+« **LLM & développement agentique — tout ça tourne chez vous** » :
+
+- [`presentation/`](presentation/) — le plan détaillé de la session (`PLAN.md`) et
+  les scripts des lives (`SCENARIOS.md`) ;
+- [`demo/`](demo/) — un mini-projet Python avec un bug volontaire : la démo
+  agentique (l'agent d'OpenCode doit rendre les tests verts) ;
+- [`.opencode/skills/explain-file/`](.opencode/skills/explain-file/SKILL.md) —
+  la skill écrite en direct pendant la troisième partie, qui explique un fichier
+  de code en moins de vingt lignes.
 

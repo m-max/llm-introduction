@@ -3,3 +3,6 @@ models/
 
 # Clé Hugging Face locale
 .env
+
+# Bytecode Python (demo/)
+__pycache__/
