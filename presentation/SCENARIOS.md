@@ -21,8 +21,17 @@ machine d'inférence `192.168.0.110:8080` (`Qwen3.8-Flash-Next`, ~35 tok/s).
 Si le réseau tombe : « le téléchargement est déjà fait, voici ce qu'on aurait
 vu » + captures.
 
-**Pré-vol** : vérifier le nom exact du petit modèle GGUF et sa commande
-`--include` la veille ; pré-warm du cache HF sur le laptop.
+**Modèle du téléchargement live (vérifié sur HF le 03/10/2026)** :
+`unsloth/Qwen3-0.6B-GGUF`, fichier `Qwen3-0.6B-Q4_K_M.gguf` (397 MB) :
+
+```bash
+hf download unsloth/Qwen3-0.6B-GGUF \
+    --include "Qwen3-0.6B-Q4_K_M.gguf" \
+    --local-dir /models/Qwen3-0.6B-Q4_K_M
+llama-cli -m /models/Qwen3-0.6B-Q4_K_M/Qwen3-0.6B-Q4_K_M.gguf
+```
+
+**Pré-vol** : ré-exécuter cette commande la veille ; pré-warm du cache HF sur le laptop.
 
 ---
 

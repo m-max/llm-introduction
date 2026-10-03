@@ -442,7 +442,7 @@ s = pres.addSlide({ masterName: "MASTER_LIVE", sectionTitle: "Acte 1 — Compren
 liveBadge(s);
 s.addText("Hugging Face & llama.cpp, en direct", { placeholder: "title" });
 step(s, 1, 0.9, 3.1, 5.4, "La page du modèle", "huggingface.co/unsloth/LFM2.5-8B-A1B-GGUF : les fichiers GGUF par quantification, comme vu slide précédente.", true);
-step(s, 2, 0.9, 4.45, 5.4, "hf download, en direct", "On télécharge un petit modèle (~500 Mo) devant vous. Le temps de ma phrase.", true);
+step(s, 2, 0.9, 4.45, 5.4, "hf download, en direct", "On télécharge un petit modèle (~400 Mo) devant vous. Le temps de ma phrase.", true);
 step(s, 3, 6.9, 3.1, 5.5, "llama-cli répond", "Sur le CPU du laptop. Pas de clé API, pas de facture, pas de réseau — sauf pour le téléchargement.", true);
 s.addShape(pres.ShapeType.roundRect, { x: 6.9, y: 4.6, w: 5.5, h: 1.35, rectRadius: 0.1, fill: { color: CODEBG } });
 s.addText([
