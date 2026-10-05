@@ -3,8 +3,8 @@
 Boîte à outils conteneurisée pour faire tourner des LLM **en CPU** sur cette
 machine (pas de GPU NVIDIA — x86_64 AVX2, 30 Go de RAM → modèles GGUF
 quantifiés dont le fichier **et** le KV cache tiennent en RAM, soit ~20 Go
-de fichier au plus). Les modèles vivent dans `models/`
-(l'[Espace de modèles](GLOSSARY.md)), monté dans le conteneur à `/models`,
+de fichier au plus). Les modèles vivent dans `models/`,
+monté dans le conteneur à `/models`,
 toujours téléchargés **à plat** avec `--local-dir` (un dossier par modèle,
 lisible et supprimable à la main — pas la structure opaque du cache HF).
 

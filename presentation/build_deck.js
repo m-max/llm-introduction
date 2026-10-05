@@ -635,7 +635,7 @@ stack.forEach(([lbl, hh, fill, fg]) => {
 s.addText("préfixe stable", { x: 7.1, y: 1.5, w: 1.6, h: 2.32, margin: 0, valign: "middle", fontFace: SANS, fontSize: 13, bold: true, color: TEAL });
 s.addText("append-only", { x: 7.1, y: 4.24, w: 1.6, h: 1.25, margin: 0, valign: "middle", fontFace: SANS, fontSize: 13, bold: true, color: MUTED });
 stat(s, 8.75, 1.5, 3.98, 2.0, "~10 000", "tokens envoyés avant même votre question (1er tour, mesuré)", { size: 44 });
-stat(s, 8.75, 3.7, 3.98, 1.8, "~3 800", "tokens rien que pour la liste des 49 skills de ce repo", { size: 36, dark: false });
+stat(s, 8.75, 3.7, 3.98, 1.8, "~3 800", "tokens rien que pour décrire 49 skills installées (mesure du 05/10)", { size: 36, dark: false });
 strip(s, 5.85, [
   { text: "Chaque ligne d'AGENTS.md, chaque skill installée, chaque outil MCP ", options: { color: WHITE } },
   { text: "est payé à chaque tour.", options: { bold: true, color: GREEN } },

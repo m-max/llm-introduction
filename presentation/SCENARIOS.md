@@ -137,10 +137,9 @@ la base du 05/10/2026 : 4 212 240 cachés / 239 162 calculés = 94,6 %).
 - vérifié en conditions réelles : la skill écrite pour ce repo a été
   détectée sans redémarrage.
 
-**Rappel acte 2** : les 49 skills de `.agents/skills/` pèsent ~3 800 tokens
-à chaque session. Pour la démo, envisager de lancer OpenCode depuis un
-répertoire qui ne les charge pas : prompt de base plus court, premier tour
-plus rapide.
+**Rappel acte 2** : le 05/10, les 49 skills alors installées pesaient
+~3 800 tokens à chaque session. Elles ont été retirées du repo depuis : le
+prompt de base de la démo est plus court, et le premier tour plus rapide.
 
 **Version 60 min** : ne pas taper. Montrer le `SKILL.md` committé et
 l'invoquer directement.

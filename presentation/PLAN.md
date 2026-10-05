@@ -245,7 +245,8 @@ pourquoi ça marche ? »
      ```
    - mesuré dans les sessions OpenCode : **~9 500–10 000 tokens avant que
      vous ayez tapé quoi que ce soit** ;
-   - dans ce repo, la liste des 49 skills pèse à elle seule ~3 800 tokens.
+   - mesuré le 05/10 avec 49 skills installées : leur liste pesait à elle
+     seule ~3 800 tokens. Ces skills ont depuis été retirées du repo.
 3. **Le tool calling de bout en bout** : six étapes, avec le rendu réel du
    template Qwen3.8.
    1. Le harnais envoie `tools` (des schémas JSON).
