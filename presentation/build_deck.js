@@ -1,6 +1,7 @@
 /* Build « LLM & développement agentique — tout ça tourne chez vous »
  * Structured deck: theme + layouts + sections, via pptxgenjs.
  * Build: node build_deck.js  (then apply_theme.js, then validate.py)
+ * Contenu : presentation/PLAN.md — chiffres : docs/research/*.md
  */
 const pptxgen = require("pptxgenjs");
 
@@ -32,9 +33,12 @@ const TINT = THEME.colors.lt2;
 const GREEN = THEME.colors.accent1;
 const TEAL = THEME.colors.accent2;
 const AMBER = THEME.colors.accent3;
+const RED = "C0392B";
 const CODEBG = "101828";
 const CODEFG = "E6F1EC";
+const CODEDIM = "A9B7C6";
 const ON_DARK_MUT = "9FB0C9";
+const GRID = "D9E2EC";
 
 const W = 13.333, H = 7.5;
 const MONO = "Courier New";
@@ -46,7 +50,6 @@ pres.layout = "LAYOUT_WIDE";
 pres.title = "LLM & développement agentique — tout ça tourne chez vous";
 pres.author = "m-max";
 pres.company = "llama-local";
-const C = pres.SchemeColor;
 
 /* ---------- masters (layouts) — syntax pptxgenjs 4.0.1 : objects:[{placeholder:{options}}] ---------- */
 pres.defineSlideMaster({
@@ -54,7 +57,7 @@ pres.defineSlideMaster({
   background: { color: DARK },
   objects: [
     { placeholder: { options: { name: "title", type: "title", x: 0.9, y: 2.35, w: 11.5, h: 1.9,
-      color: WHITE, fontFace: SERIF, fontSize: 44, bold: true, valign: "top", margin: 0 } } },
+      color: WHITE, fontFace: SERIF, fontSize: 44, bold: true, align: "left", valign: "top", margin: 0 } } },
   ],
 });
 
@@ -63,7 +66,7 @@ pres.defineSlideMaster({
   background: { color: DARK },
   objects: [
     { placeholder: { options: { name: "title", type: "title", x: 0.9, y: 2.75, w: 11.5, h: 1.3,
-      color: WHITE, fontFace: SERIF, fontSize: 40, bold: true, valign: "top", margin: 0 } } },
+      color: WHITE, fontFace: SERIF, fontSize: 40, bold: true, align: "left", valign: "top", margin: 0 } } },
   ],
 });
 
@@ -82,7 +85,7 @@ pres.defineSlideMaster({
   background: { color: DARK },
   objects: [
     { placeholder: { options: { name: "title", type: "title", x: 0.9, y: 1.7, w: 11.5, h: 1.0,
-      color: WHITE, fontFace: SERIF, fontSize: 36, bold: true, valign: "top", margin: 0 } } },
+      color: WHITE, fontFace: SERIF, fontSize: 36, bold: true, align: "left", valign: "top", margin: 0 } } },
   ],
 });
 
@@ -103,7 +106,8 @@ function chip(slide, text, x, y, w, opts = {}) {
 
 function arrow(slide, x1, y1, x2, y2, opts = {}) {
   slide.addShape(pres.ShapeType.line, {
-    x: x1, y: y1, w: x2 - x1, h: y2 - y1,
+    x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1), h: Math.abs(y2 - y1),
+    flipH: x2 < x1, flipV: y2 < y1,
     line: { color: opts.color || TEAL, width: opts.width || 2, endArrowType: "triangle" },
   });
 }
@@ -120,7 +124,7 @@ function codeBlock(slide, x, y, w, h, lines, opts = {}) {
   slide.addShape(pres.ShapeType.roundRect, {
     x, y, w, h, rectRadius: 0.08, fill: { color: CODEBG },
   });
-  const paras = lines.map((ln, i) => {
+  const paras = lines.map((ln) => {
     if (typeof ln === "string")
       return { text: ln, options: { color: opts.color || CODEFG, breakLine: true } };
     return { text: ln.t, options: { color: ln.c || CODEFG, breakLine: true, bold: !!ln.b } };
@@ -131,8 +135,62 @@ function codeBlock(slide, x, y, w, h, lines, opts = {}) {
   });
 }
 
+/* Card with a bold heading and a list of lines. items: string | {t, b, c} */
+function textCard(slide, x, y, w, h, heading, items, opts = {}) {
+  const dark = !!opts.dark;
+  card(slide, x, y, w, h, opts.fill || (dark ? DARK : TINT));
+  const runs = [];
+  if (heading) runs.push({ text: heading, options: { bold: true, fontSize: opts.headSize || 16,
+    color: opts.headColor || (dark ? GREEN : INK), breakLine: items.length > 0 } });
+  items.forEach((it, i) => {
+    const o = typeof it === "string" ? { t: it } : it;
+    runs.push({ text: o.t, options: {
+      color: o.c || (o.b ? (dark ? WHITE : TEAL) : (dark ? ON_DARK_MUT : MUTED)),
+      bold: !!o.b, breakLine: i < items.length - 1 } });
+  });
+  slide.addText(runs, {
+    x: x + 0.3, y: y + 0.25, w: w - 0.6, h: h - 0.45, margin: 0,
+    fontFace: SANS, fontSize: opts.fontSize || 14, valign: "top", paraSpaceAfter: opts.space || 8,
+  });
+}
+
+/* Big number + label */
+function stat(slide, x, y, w, h, big, label, opts = {}) {
+  const dark = opts.dark !== false;
+  card(slide, x, y, w, h, dark ? DARK : TINT);
+  slide.addText(big, { x, y: y + 0.18, w, h: h * 0.52, margin: 0, align: "center", valign: "middle",
+    fontFace: SERIF, fontSize: opts.size || 40, bold: true, color: opts.color || (dark ? GREEN : TEAL) });
+  slide.addText(label, { x: x + 0.25, y: y + h * 0.58, w: w - 0.5, h: h * 0.38, margin: 0, align: "center",
+    valign: "top", fontFace: SANS, fontSize: opts.labelSize || 13, color: dark ? ON_DARK_MUT : MUTED });
+}
+
+/* Dark strip carrying the slide's take-away */
+function strip(slide, y, runs, opts = {}) {
+  const h = opts.h || 0.9;
+  slide.addShape(pres.ShapeType.roundRect, { x: 0.6, y, w: 12.13, h, rectRadius: 0.1, fill: { color: DARK } });
+  slide.addText(runs, { x: 0.95, y, w: 11.45, h, margin: 0, valign: "middle", fontFace: SANS, fontSize: opts.fontSize || 16 });
+}
+
+/* Source / measurement footnote */
+function src(slide, text) {
+  slide.addText(text, { x: 0.6, y: 6.98, w: 11.9, h: 0.32, margin: 0, valign: "middle",
+    fontFace: SANS, fontSize: 10, italic: true, color: MUTED });
+}
+
+/* Common chart options — fresh object at each call (pptxgenjs mutates options) */
+function chartOpts(extra) {
+  return Object.assign({
+    showTitle: false, showLegend: false,
+    showValue: true, dataLabelPosition: "outEnd", dataLabelColor: INK, dataLabelFontSize: 12,
+    dataLabelFontFace: "+mn-lt",
+    catAxisLabelColor: INK, catAxisLabelFontSize: 12, catAxisLabelFontFace: "+mn-lt",
+    valAxisLabelColor: MUTED, valAxisLabelFontSize: 10, valAxisLabelFontFace: "+mn-lt",
+    valGridLine: { color: GRID, size: 1 }, catGridLine: { style: "none" },
+  }, extra);
+}
+
 function actDots(slide, current, y) {
-  const labels = ["Comprendre", "Agir", "Étendre"];
+  const labels = ["Exécuter", "Orchestrer", "Explorer"];
   labels.forEach((lbl, i) => {
     const x = 0.9 + i * 1.55;
     slide.addShape(pres.ShapeType.ellipse, {
@@ -141,7 +199,7 @@ function actDots(slide, current, y) {
       line: { color: i === current ? GREEN : ON_DARK_MUT, width: 1.25 },
     });
     slide.addText(lbl, {
-      x: x - 0.35, y: y + 0.28, w: 0.95, h: 0.3, align: "center", margin: 0,
+      x: x - 0.4, y: y + 0.28, w: 1.05, h: 0.3, align: "center", margin: 0,
       fontFace: SANS, fontSize: 10, color: i === current ? GREEN : ON_DARK_MUT,
     });
   });
@@ -170,621 +228,702 @@ function step(slide, n, x, y, w, titleTxt, descTxt, dark) {
     fontFace: SANS, fontSize: 17, bold: true, color: dark ? WHITE : INK,
   });
   slide.addText(descTxt, {
-    x: x + 0.6, y: y + 0.42, w: w - 0.6, h: 0.85, margin: 0, valign: "top",
-    fontFace: SANS, fontSize: 13, color: dark ? ON_DARK_MUT : MUTED,
+    x: x + 0.6, y: y + 0.42, w: w - 0.6, h: 0.75, margin: 0, valign: "top",
+    fontFace: SANS, fontSize: 14, color: dark ? ON_DARK_MUT : MUTED,
   });
 }
 
-/* =====================================================================
-   SECTION — OUVERTURE
-===================================================================== */
-pres.addSection({ title: "Ouverture" });
+function divider(sectionTitle, kicker, title, act, notes) {
+  const s = pres.addSlide({ masterName: "MASTER_DIVISEUR", sectionTitle });
+  s.addText(kicker, { x: 0.9, y: 2.15, w: 10, h: 0.4, margin: 0, fontFace: SANS, fontSize: 15, bold: true, color: GREEN, charSpacing: 3 });
+  s.addText(title, { placeholder: "title" });
+  actDots(s, act, 4.7);
+  s.addNotes(notes);
+  return s;
+}
 
-// 1 — Titre
-let s = pres.addSlide({ masterName: "MASTER_TITRE", sectionTitle: "Ouverture" });
-s.addText("SESSION LIVE · 1 HEURE · ZÉRO CLOUD", {
-  x: 0.9, y: 1.55, w: 11, h: 0.4, margin: 0, fontFace: SANS, fontSize: 14,
-  bold: true, color: GREEN, charSpacing: 3,
+const S_OUV = "Ouverture";
+const S_A1 = "Acte 1 — Exécuter";
+const S_A2 = "Acte 2 — Orchestrer";
+const S_A3 = "Acte 3 — Explorer";
+const S_CLO = "Clôture";
+let s;
+
+/* =====================================================================
+   OUVERTURE (~4 min)
+===================================================================== */
+pres.addSection({ title: S_OUV });
+
+// Titre
+s = pres.addSlide({ masterName: "MASTER_TITRE", sectionTitle: S_OUV });
+s.addText("SESSION LIVE · 60 MIN · ZÉRO CLOUD", {
+  x: 0.9, y: 1.55, w: 11, h: 0.4, margin: 0, fontFace: SANS, fontSize: 14, bold: true, color: GREEN, charSpacing: 3,
 });
 s.addText("LLM & développement agentique", { placeholder: "title" });
-s.addText("Comprendre les modèles de bout en bout — et les faire tourner chez soi.", {
-  x: 0.9, y: 4.35, w: 11, h: 0.6, margin: 0, fontFace: SANS, fontSize: 20, color: ON_DARK_MUT,
+s.addText("Tout ça tourne chez vous — à condition de savoir où passe la mémoire.", {
+  x: 0.9, y: 4.35, w: 11.5, h: 0.6, margin: 0, fontFace: SANS, fontSize: 20, color: ON_DARK_MUT,
 });
-s.addText("m-max · octobre 2026 · un laptop, un serveur CPU, aucun cloud", {
+s.addText("m-max · octobre 2026 · un laptop CPU, un serveur sur le LAN, aucun cloud", {
   x: 0.9, y: 6.6, w: 11, h: 0.4, margin: 0, fontFace: SANS, fontSize: 13, color: ON_DARK_MUT,
 });
-s.addNotes("Accueil. Annoncer le cadre : 1 h, questions pendant les lives ou en fin. Toutes les démos du jour tournent sur du matériel local — on le prouvera à chaque acte.");
+s.addNotes("Accueil et hook (3 min). « Vous appuyez sur Entrée : votre code part chez quelqu'un d'autre. Aujourd'hui, la même chose sans que rien ne sorte de la salle — et on regarde ce que fait la machine. » Sondage à main levée : qui code avec un assistant IA ? qui a déjà fait tourner un modèle chez soi ? qui saurait dire si un 8B tient sur son laptop (réponse slide « Dimensionner ») ? Cadre : ~60 min, questions pendant les lives ou à la fin.");
 
-// 2 — Hook
-s = pres.addSlide({ masterName: "MASTER_TITRE", sectionTitle: "Ouverture" });
-s.addText("Vous appuyez sur Entrée.", {
-  x: 0.9, y: 1.7, w: 11.5, h: 0.9, margin: 0, fontFace: SERIF, fontSize: 38, bold: true, color: WHITE,
-});
-s.addText([
-  { text: "Que se passe-t-il, ", options: { color: WHITE } },
-  { text: "vraiment", options: { color: GREEN } },
-  { text: " ?", options: { color: WHITE } },
-], { x: 0.9, y: 2.62, w: 11.5, h: 0.9, margin: 0, fontFace: SERIF, fontSize: 38, bold: true });
-s.addText("Vous utilisez un LLM tous les jours. Aujourd'hui, on ouvre la boîte.", {
-  x: 0.9, y: 3.85, w: 11, h: 0.5, margin: 0, fontFace: SANS, fontSize: 19, color: ON_DARK_MUT,
-});
-card(s, 0.9, 4.9, 11.5, 1.5, DARK);
-s.addText([
-  { text: "À main levée : ", options: { bold: true, color: GREEN, breakLine: true } },
-  { text: "Qui code avec un assistant IA ? · Qui sait ce qu'est un token ? · Qui a déjà fait tourner un modèle chez soi ?", options: { color: ON_DARK_MUT } },
-], { x: 1.25, y: 5.15, w: 10.8, h: 1.0, margin: 0, fontFace: SANS, fontSize: 16, valign: "top" });
-s.addNotes("Hook (2 min). Sonder la salle pour calibrer le vocabulaire de la suite. Promettre : à la fin, la boîte est ouverte et tout était local.");
-
-// 3 — Programme
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Ouverture" });
-s.addText("Le programme : comprendre, agir, étendre", { placeholder: "title" });
+// Programme
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_OUV });
+s.addText("Le programme : exécuter, orchestrer, explorer", { placeholder: "title" });
 const acts = [
-  ["1", "Comprendre", "Un LLM, vraiment : tokens, contexte, sampling, quantification. Et on en télécharge un en direct."],
-  ["2", "Agir", "Le développement agentique : la boucle, les outils. Un agent corrige un vrai bug, branché sur un modèle local."],
-  ["3", "Étendre", "Skills, MCP, paysage des harnais. On écrit une skill en direct et on l'invoque."],
+  ["1", "Exécuter", "Ce qui se passe entre Entrée et le premier mot : mémoire, quantification, prefill, decode, KV cache.", "LIVE : de Hugging Face à la ligne de log"],
+  ["2", "Orchestrer", "Ce qu'un agent envoie au modèle à chaque tour, et pourquoi ça marche : outils, boucle, contexte, cache.", "LIVE : un agent local corrige un bug · une skill en direct"],
+  ["3", "Explorer", "Le paysage à l'automne 2026 : où en sont les modèles open-weights, et sur quel matériel les faire tourner.", "Les chiffres du jour, sourcés"],
 ];
-acts.forEach(([n, t, d], i) => {
+acts.forEach(([n, t, d, live], i) => {
   const x = 0.6 + i * 4.18;
-  card(s, x, 1.55, 3.85, 4.3);
-  s.addText("ACTE " + n, { x: x + 0.35, y: 1.9, w: 2, h: 0.35, margin: 0, fontFace: SANS, fontSize: 13, bold: true, color: GREEN, charSpacing: 2 });
-  s.addText(t, { x: x + 0.35, y: 2.3, w: 3.2, h: 0.6, margin: 0, fontFace: SERIF, fontSize: 26, bold: true, color: INK });
-  s.addText(d, { x: x + 0.35, y: 3.05, w: 3.2, h: 2.5, margin: 0, fontFace: SANS, fontSize: 14, color: MUTED, valign: "top" });
+  card(s, x, 1.5, 3.85, 4.55);
+  s.addText("ACTE " + n, { x: x + 0.35, y: 1.8, w: 2, h: 0.35, margin: 0, fontFace: SANS, fontSize: 13, bold: true, color: GREEN, charSpacing: 2 });
+  s.addText(t, { x: x + 0.35, y: 2.2, w: 3.2, h: 0.6, margin: 0, fontFace: SERIF, fontSize: 26, bold: true, color: INK });
+  s.addText(d, { x: x + 0.35, y: 2.95, w: 3.2, h: 1.9, margin: 0, fontFace: SANS, fontSize: 14, color: MUTED, valign: "top" });
+  s.addText(live, { x: x + 0.35, y: 4.95, w: 3.2, h: 0.85, margin: 0, fontFace: SANS, fontSize: 14, bold: true, color: TEAL, valign: "top" });
 });
-s.addText("… et à chaque acte, une démonstration en direct. À la fin : tout ça tourne chez vous.", {
-  x: 0.6, y: 6.25, w: 12.1, h: 0.5, margin: 0, fontFace: SANS, fontSize: 16, italic: true, color: TEAL,
-});
-s.addNotes("Programme (1 min). Insister sur l'alternance théorie/live : chaque acte se termine par une démo réelle sur le matériel de la salle.");
+strip(s, 6.25, [
+  { text: "Deux fils rouges : ", options: { bold: true, color: GREEN } },
+  { text: "la mémoire est la monnaie · rien ne sort de la salle.", options: { color: WHITE } },
+], { h: 0.6 });
+s.addNotes("Programme (1 min). Chaque acte a son live. Annoncer les deux fils rouges : (1) la mémoire — RAM, bande passante, KV cache — explique presque tout ; (2) la confidentialité, avec une nuance à l'acte 2.");
 
 /* =====================================================================
-   SECTION — ACTE 1 : COMPRENDRE
+   ACTE 1 — EXÉCUTER (~25 min dont live 7)
 ===================================================================== */
-pres.addSection({ title: "Acte 1 — Comprendre" });
+pres.addSection({ title: S_A1 });
 
-// 4 — Diviseur acte 1
-s = pres.addSlide({ masterName: "MASTER_DIVISEUR", sectionTitle: "Acte 1 — Comprendre" });
-s.addText("ACTE 1 · COMPRENDRE", { x: 0.9, y: 2.15, w: 10, h: 0.4, margin: 0, fontFace: SANS, fontSize: 15, bold: true, color: GREEN, charSpacing: 3 });
-s.addText("Comprendre un LLM, vraiment", { placeholder: "title" });
-actDots(s, 0, 4.7);
-s.addNotes("Transition : la théorie d'abord, quinze minutes, puis le premier live.");
+divider(S_A1, "ACTE 1 · EXÉCUTER", "Entre Entrée et le premier mot", 0,
+  "Question de l'acte : qu'est-ce qui se passe entre l'appui sur Entrée et le premier mot ? Chaque étape sera reliée à un réglage et à une mesure. Pas de maths, pas d'entraînement : uniquement ce qui explique la RAM et la vitesse.");
 
-// 5 — Machine à prédire
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 1 — Comprendre" });
-s.addText("Un LLM prédit le token suivant. C'est tout.", { placeholder: "title" });
-chip(s, "« Le chat noir »", 0.6, 1.9, 1.9, { bold: true, fontSize: 14 });
-arrow(s, 2.55, 2.15, 3.15, 2.15);
-s.addShape(pres.ShapeType.roundRect, { x: 3.2, y: 1.62, w: 2.5, h: 1.05, rectRadius: 0.12, fill: { color: DARK } });
-s.addText("LLM\n8 000 000 000 poids", { x: 3.2, y: 1.62, w: 2.5, h: 1.05, align: "center", valign: "middle", margin: 0, fontFace: SANS, fontSize: 13, bold: true, color: WHITE });
-arrow(s, 5.75, 2.15, 6.35, 2.15);
-s.addShape(pres.ShapeType.roundRect, { x: 6.4, y: 1.35, w: 3.1, h: 1.6, rectRadius: 0.1, fill: { color: TINT } });
-[["Le", 12], ["Un", 14], ["Mon", 16]].forEach(([w_, off], i) => {
-  const probs = [["saute", "68 %"], ["dort", "19 %"], ["chante", "7 %"]];
-  chip(s, probs[i][0] + "  " + probs[i][1], 6.6, 1.5 + i * 0.48, 2.7, { fill: i === 0 ? GREEN : WHITE, bold: i === 0, fontSize: 13, color: i === 0 ? DARK : INK });
-});
-arrow(s, 9.55, 2.15, 10.15, 2.15);
-chip(s, "« saute »", 10.2, 1.9, 1.5, { bold: true, fill: DARK, color: WHITE, fontSize: 15 });
-s.addText("Le token choisi est ajouté à l'entrée, et le modèle recommence. Token après token. Il ne « sait » rien d'autre que prédire la suite la plus probable.", {
-  x: 0.6, y: 3.35, w: 7.4, h: 1.4, margin: 0, fontFace: SANS, fontSize: 16, color: INK, valign: "top",
-});
-card(s, 8.3, 3.35, 4.4, 3.0);
-s.addText([
-  { text: "Pourquoi c'est important", options: { bold: true, fontSize: 16, color: INK, breakLine: true } },
-  { text: "· Pas de base de connaissances : des probabilités apprises.", options: { color: MUTED, breakLine: true } },
-  { text: "· Une réponse = des milliers d'appels du même moteur.", options: { color: MUTED, breakLine: true } },
-  { text: "· Toute la suite de la session repose sur cette phrase.", options: { color: MUTED } },
-], { x: 8.62, y: 3.62, w: 3.8, h: 2.5, margin: 0, fontFace: SANS, valign: "top", paraSpaceAfter: 8 });
-s.addNotes("Le concept fondateur (3 min). Le diagramme : entrée → modèle → distribution → token choisi → re-boucle. Dire : « tout le reste de la présentation ne fait qu'exploiter cette phrase ».");
-
-// 6 — Tokens
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 1 — Comprendre" });
-s.addText("Le token : la monnaie du modèle", { placeholder: "title" });
-s.addText("« Le développeur comprend » vu par le modèle :", { x: 0.6, y: 1.5, w: 8, h: 0.4, margin: 0, fontFace: SANS, fontSize: 16, color: INK });
-const toks = ["ĠLe", " Ġd", "éve", "lo", "peur", " Ġcom", "prend"];
-let tx = 0.6;
-toks.forEach((tk, i) => {
-  const wd = 0.55 + tk.length * 0.14;
-  chip(s, tk, tx, 2.0, wd, { fill: i % 2 ? TINT : WHITE, line: TEAL, lineW: 1, mono: true, fontSize: 15 });
-  tx += wd + 0.22;
-});
-card(s, 0.6, 2.95, 6.1, 3.3);
-s.addText([
-  { text: "Les ordres de grandeur", options: { bold: true, fontSize: 16, color: INK, breakLine: true } },
-  { text: "· ≈ 4 caractères = 1 token en anglais.", options: { color: MUTED, breakLine: true } },
-  { text: "· Le français coûte 20-30 % de tokens de plus.", options: { color: MUTED, breakLine: true } },
-  { text: "· « développeur » → « d » + « éve » + « lopeur » : le modèle ne voit pas des mots, des morceaux.", options: { color: MUTED, breakLine: true } },
-  { text: "· Facturation, fenêtre de contexte, lenteur : tout se compte en tokens.", options: { color: MUTED } },
-], { x: 0.92, y: 3.22, w: 5.5, h: 2.85, margin: 0, fontFace: SANS, valign: "top", paraSpaceAfter: 8 });
-card(s, 7.0, 2.95, 5.7, 3.3, DARK);
-s.addText([
-  { text: "Chez vous aussi", options: { bold: true, fontSize: 15, color: GREEN, breakLine: true } },
-  { text: "Le petit modèle du live n'a pas de mot « français » : il a des morceaux de français, appris comme les autres. La langue n'est pas une option de compilation.", options: { color: WHITE, breakLine: true } },
-], { x: 7.32, y: 3.25, w: 5.1, h: 2.7, margin: 0, fontFace: SANS, fontSize: 14, valign: "top" });
-s.addNotes("Tokens (2 min). Montrer les morceaux : le modèle ne voit jamais un mot entier. Enchaîner : « le token, c'est aussi l'unité de la fenêtre de contexte, vue juste après ».");
-
-// 7 — Paramètres
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 1 — Comprendre" });
-s.addText("« 8B paramètres », ça veut dire quoi ?", { placeholder: "title" });
-s.addText("8 000 000 000", { x: 0.6, y: 1.7, w: 6.0, h: 1.3, margin: 0, fontFace: SERIF, fontSize: 64, bold: true, color: GREEN });
-s.addText("nombres appris pendant l'entraînement — c'est tout ce qu'est le « cerveau »", {
-  x: 0.6, y: 3.0, w: 6.0, h: 0.6, margin: 0, fontFace: SANS, fontSize: 15, color: MUTED,
-});
-card(s, 0.6, 3.85, 6.0, 2.6);
-s.addText([
-  { text: "· Chaque token qui traverse le modèle est multiplié contre ces nombres, couche après couche.", options: { color: MUTED, breakLine: true } },
-  { text: "· Le code du modèle est ouvert ; ce qui compte, ce sont les poids — de vrais fichiers, téléchargeables.", options: { color: MUTED } },
-], { x: 0.92, y: 4.1, w: 5.4, h: 2.1, margin: 0, fontFace: SANS, fontSize: 15, valign: "top", paraSpaceAfter: 8 });
-card(s, 7.1, 1.7, 5.6, 4.75);
-s.addText([
-  { text: "Conséquence directe", options: { bold: true, fontSize: 16, color: INK, breakLine: true } },
-  { text: "Un poids est un nombre, pas un circuit : il peut être calculé par un CPU. Avec moins de précision (quantification, juste après), un 8 milliards de poids tient sur un laptop.", options: { color: MUTED, breakLine: true } },
-  { text: "8B = un modèle de « poche ». Les modèles frontieres en font 10 à 100 fois plus — là, il faut une salle de serveurs.", options: { color: MUTED } },
-], { x: 7.42, y: 2.0, w: 5.0, h: 4.2, margin: 0, fontFace: SANS, valign: "top", paraSpaceAfter: 10 });
-s.addNotes("Paramètres (2 min). Démystifier les chiffres marketing. Le pont est posé : des nombres → moins de précision → CPU. La quantification arrive en fin d'acte.");
-
-// 8 — Fenêtre de contexte
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 1 — Comprendre" });
-s.addText("La fenêtre de contexte : sa mémoire de travail", { placeholder: "title" });
-s.addShape(pres.ShapeType.roundRect, { x: 0.6, y: 1.55, w: 7.0, h: 4.9, rectRadius: 0.1, fill: { color: WHITE }, line: { color: INK, width: 1.5 } });
-const layers = [
-  ["Prompt système", 0.55, DARK, WHITE],
-  ["AGENTS.md / règles du projet", 0.7, TEAL, WHITE],
-  ["Fichiers versés", 1.0, GREEN, DARK],
-  ["Historique de la conversation", 1.45, TINT, INK],
-  ["Votre question", 0.55, AMBER, DARK],
+// Pipeline
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A1 });
+s.addText("Six étapes entre Entrée et le premier mot", { placeholder: "title" });
+const pipe = [
+  ["Fichier .gguf", "poids + métadonnées", "→ choix du quant"],
+  ["Chargement", "mmap dans la RAM", "→ taille du fichier"],
+  ["Template + tokens", "le texte que lit le modèle", "→ chat template"],
+  ["Prefill", "tout le prompt d'un coup", "→ calcul · 1er mot"],
+  ["Decode", "un token à la fois", "→ bande passante"],
+  ["Texte", "streamé à l'écran", "→ tok/s"],
 ];
-let ly = 1.75;
-layers.forEach(([lbl, hh, fill, fg]) => {
-  s.addShape(pres.ShapeType.rect, { x: 0.8, y: ly, w: 6.6, h: hh, fill: { color: fill } });
-  s.addText(lbl, { x: 0.95, y: ly, w: 6.3, h: hh, margin: 0, valign: "middle", fontFace: SANS, fontSize: 14, bold: true, color: fg });
-  ly += hh + 0.12;
+pipe.forEach(([t, d, k], i) => {
+  const x = 0.6 + i * 2.08;
+  const hot = i === 3 || i === 4;
+  chip(s, t, x, 1.75, 1.7, { h: 0.85, bold: true, fontSize: 15, fill: hot ? DARK : TINT, color: hot ? WHITE : INK });
+  s.addText(d, { x, y: 2.72, w: 1.7, h: 0.6, margin: 0, align: "center", valign: "top", fontFace: SANS, fontSize: 13, color: MUTED });
+  s.addText(k, { x, y: 3.3, w: 1.7, h: 0.35, margin: 0, align: "center", fontFace: SANS, fontSize: 13, bold: true, color: TEAL });
+  if (i < 5) arrow(s, x + 1.72, 2.175, x + 2.06, 2.175);
 });
-card(s, 8.0, 1.55, 4.7, 4.9);
-s.addText([
-  { text: "Ce que ça implique", options: { bold: true, fontSize: 16, color: INK, breakLine: true } },
-  { text: "· Le modèle ne « retient » rien entre deux sessions : tout doit tenir dans la fenêtre.", options: { color: MUTED, breakLine: true } },
-  { text: "· Plus la conversation grossit, moins il reste de place pour le code.", options: { color: MUTED, breakLine: true } },
-  { text: "· Ordres de grandeur : 8k (2023) → 128k → 262k chez nous.", options: { color: MUTED, breakLine: true } },
-  { text: "· Le contexte est une ressource rare → acte 2.", options: { bold: true, color: TEAL } },
-], { x: 8.32, y: 1.85, w: 4.1, h: 4.3, margin: 0, fontFace: SANS, fontSize: 14.5, valign: "top", paraSpaceAfter: 9 });
-s.addNotes("Contexte (2 min). Le dessin « tiroirs » : tout ce qui est payé à chaque tour. Concept mis en banque : il ressort à l'acte 2 (budget de contexte) et au KV cache.");
+// decode loop
+s.addText("↻ boucle : × chaque token", { x: 8.66, y: 1.35, w: 1.9, h: 0.32, margin: 0, align: "center", fontFace: SANS, fontSize: 12, bold: true, color: GREEN });
+// KV cache band under prefill + decode
+s.addShape(pres.ShapeType.roundRect, { x: 6.84, y: 3.85, w: 3.78, h: 0.62, rectRadius: 0.08, fill: { color: GREEN } });
+s.addText("KV cache : rempli par le prefill, relu à chaque token", { x: 6.84, y: 3.85, w: 3.78, h: 0.62, margin: 0, align: "center", valign: "middle", fontFace: SANS, fontSize: 13, bold: true, color: DARK });
+textCard(s, 0.6, 3.85, 5.9, 2.25, "Deux ressources, deux limites", [
+  "La RAM : il faut y loger les poids et le KV cache.",
+  "La bande passante mémoire : le decode relit les poids à chaque token.",
+  { t: "Le calcul (CPU/GPU) ne limite vraiment que le prefill.", b: true },
+]);
+strip(s, 6.3, [
+  { text: "Chaque étape a un réglage et une mesure. ", options: { color: WHITE } },
+  { text: "On les prend une par une.", options: { bold: true, color: GREEN } },
+], { h: 0.6 });
+s.addNotes("La carte de l'acte (2 min). Dérouler les six étapes de gauche à droite. Insister sur les deux cases sombres (prefill, decode) : c'est là que se joue la vitesse. La bande verte (KV cache) reviendra deux fois : ici, puis à l'acte 2 comme cache de prompt.");
 
-// 9 — Sampling / température
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 1 — Comprendre" });
-s.addText("La température : un dé plus ou moins pipé", { placeholder: "title" });
-s.addChart(pres.ChartType.bar, [
-  { name: "t = 0,5 (sûr)", labels: ["saute", "dort", "chante", "votate"], values: [78, 15, 5.5, 0.5] },
-  { name: "t = 2,0 (créatif)", labels: ["saute", "dort", "chante", "votate"], values: [34, 28, 20, 12] },
-], {
-  x: 0.6, y: 1.6, w: 7.2, h: 4.7,
-  barDir: "col", chartColors: [TEAL, GREEN],
-  showTitle: false, showLegend: true, legendPos: "b", legendFontSize: 12, legendColor: INK,
-  showValue: true, dataLabelPosition: "outEnd", dataLabelColor: INK, dataLabelFontSize: 11, dataLabelFormatCode: '0.#"%"',
-  catAxisLabelColor: INK, catAxisLabelFontSize: 13, catAxisLabelFontFace: "+mn-lt",
-  valAxisLabelColor: MUTED, valAxisLabelFontSize: 10, valAxisLabelFontFace: "+mn-lt",
-  valAxisMaxVal: 90, valGridLine: { color: "D9E2EC", size: 1 }, catGridLine: { style: "none" },
-});
-card(s, 8.2, 1.6, 4.5, 4.7);
-s.addText([
-  { text: "Lire le graphique", options: { bold: true, fontSize: 16, color: INK, breakLine: true } },
-  { text: "· t basse : le modèle écrase sa confiance sur un seul token. Répétable, ennuyeux, prévisible.", options: { color: MUTED, breakLine: true } },
-  { text: "· t haute : la distribution s'aplatit — « votate » devient possible.", options: { color: MUTED, breakLine: true } },
-  { text: "· t = 0 : purement déterministe (le même token à chaque fois).", options: { color: MUTED, breakLine: true } },
-  { text: "Code à produire : température basse. Poésie : haute.", options: { bold: true, color: TEAL } },
-], { x: 8.52, y: 1.9, w: 3.9, h: 4.1, margin: 0, fontFace: SANS, fontSize: 14, valign: "top", paraSpaceAfter: 9 });
-s.addNotes("Sampling (2 min). « votate » n'existe pas — c'est le but : à température haute, un token absurde devient crédible. Le lien avec l'hallucination est fait pour la slide suivante.");
-
-// 10 — Hallucinations
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 1 — Comprendre" });
-s.addText("L'hallucination n'est pas un bug", { placeholder: "title" });
-card(s, 0.6, 1.55, 6.0, 3.4);
-s.addText([
-  { text: "Ce que le modèle fait", options: { bold: true, fontSize: 17, color: INK, breakLine: true } },
-  { text: "Prolonger le plausible. « API la plus probable après cette phrase » ≠ « API qui existe ».", options: { color: MUTED, breakLine: true } },
-], { x: 0.92, y: 1.85, w: 5.4, h: 2.8, margin: 0, fontFace: SANS, fontSize: 15, valign: "top", paraSpaceAfter: 8 });
-card(s, 6.85, 1.55, 6.0, 3.4);
-s.addText([
-  { text: "Ce qu'il n'a pas", options: { bold: true, fontSize: 17, color: INK, breakLine: true } },
-  { text: "Un mode « je vérifie ». Pas de base de faits à consulter, pas de signal de certitude fiable.", options: { color: MUTED, breakLine: true } },
-], { x: 7.17, y: 1.85, w: 5.4, h: 2.8, margin: 0, fontFace: SANS, fontSize: 15, valign: "top", paraSpaceAfter: 8 });
-s.addShape(pres.ShapeType.roundRect, { x: 0.6, y: 5.25, w: 12.25, h: 1.25, rectRadius: 0.1, fill: { color: DARK } });
-s.addText([
-  { text: "D'où la doctrine : ", options: { bold: true, color: GREEN } },
-  { text: "on ne demande pas au modèle d'être sûr, on lui donne de quoi vérifier — tests, compilateur, outils. C'est tout l'acte 2.", options: { color: WHITE } },
-], { x: 0.95, y: 5.25, w: 11.6, h: 1.25, margin: 0, valign: "middle", fontFace: SANS, fontSize: 17 });
-s.addNotes("Hallucinations (2 min). Pas moraliser : expliquer structurellement. La conclusion est la porte vers l'agentique : les tests et les outils sont la réponse outillée au problème probabilitaire.");
-
-// 11 — Entraînement
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 1 — Comprendre" });
-s.addText("Comment on fabrique un LLM", { placeholder: "title" });
-const train = [
-  ["1 · Pré-training", "Des billions de pages du web. Objectif unique : prédire le token suivant. Naît un modèle qui « parle », mais qui finit tout.", TINT, INK],
-  ["2 · SFT", "Fine-tuning sur conversations exemplaires : on lui apprend le format question → réponse, les outils, le ton.", TINT, INK],
-  ["3 · Alignement (RLHF)", "Des humains comparent des réponses ; le modèle apprend à préférer ce qui est utile et honnête.", TINT, INK],
+// GGUF
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A1 });
+s.addText("Un fichier GGUF se lit comme une étiquette", { placeholder: "title" });
+const fname = [
+  ["LFM2.5", "famille", 1.7], ["8B", "paramètres\ntotaux", 1.0], ["A1B", "≈ 1 B\nactifs (MoE)", 1.2],
+  ["UD", "quant Unsloth\nDynamic", 1.2], ["Q5_K_M", "5 bits, mix M\n(tenseurs sensibles +)", 2.3], [".gguf", "format\nllama.cpp", 1.2],
 ];
-train.forEach(([t, d, f, c], i) => {
-  const x = 0.6 + i * 4.18;
-  card(s, x, 1.7, 3.85, 3.5, f);
-  s.addText(t, { x: x + 0.3, y: 2.0, w: 3.25, h: 0.45, margin: 0, fontFace: SERIF, fontSize: 19, bold: true, color: TEAL });
-  s.addText(d, { x: x + 0.3, y: 2.55, w: 3.25, h: 2.4, margin: 0, fontFace: SANS, fontSize: 14, color: INK, valign: "top" });
-  if (i < 2) arrow(s, x + 3.85, 3.45, x + 4.18, 3.45);
+let fx = 0.6;
+fname.forEach(([t, d, w], i) => {
+  chip(s, t, fx, 1.65, w, { h: 0.75, mono: true, bold: true, fontSize: 20, fill: i === 4 ? GREEN : DARK, color: i === 4 ? DARK : WHITE });
+  s.addText(d, { x: fx - 0.1, y: 2.5, w: w + 0.2, h: 0.75, margin: 0, align: "center", valign: "top", fontFace: SANS, fontSize: 13, color: MUTED });
+  fx += w + 0.12;
 });
-s.addText("Un modèle « instruct » que vous téléchargez a passé les trois étapes. Le pré-training coûte des millions ; les deux autres, des semaines. Vous, vous prenez le résultat.", {
-  x: 0.6, y: 5.6, w: 12.2, h: 0.9, margin: 0, fontFace: SANS, fontSize: 16, italic: true, color: MUTED, valign: "top",
-});
-s.addNotes("Entraînement (2 min). Survol — pas de maths. Important : distinguer le modèle brut (complète) du modèle instruct (obéit), et situer ce qu'on télécharge.");
+s.addText("LFM2.5-8B-A1B-UD-Q5_K_M.gguf · 5,92 GiB sur le disque", { x: 0.6, y: 3.3, w: 9, h: 0.3, margin: 0, fontFace: SANS, fontSize: 13, italic: true, color: TEAL });
+textCard(s, 0.6, 3.85, 5.9, 2.65, "Dedans : les poids", [
+  "Des milliards de nombres, rangés en tenseurs, déjà quantifiés.",
+  "Un seul fichier, pensé pour être mappé en mémoire tel quel.",
+  { t: "Taille du fichier ≈ RAM occupée par les poids.", b: true },
+]);
+textCard(s, 6.83, 3.85, 5.9, 2.65, "… et des métadonnées", [
+  "Architecture, nombre de couches, contexte d'entraînement.",
+  "Le chat template (Jinja) : comment formater une conversation.",
+  { t: "D'où « rien à configurer » : -c 0 lit le contexte du modèle.", b: true },
+]);
+src(s, "Sources : spec GGUF (ggml-org/ggml docs/gguf.md) · model card unsloth/LFM2.5-8B-A1B-GGUF · taille : print_info du log llama.cpp.");
+s.addNotes("GGUF (2 min). Lire le nom comme une étiquette de supermarché. A1B = environ 1 B de paramètres actifs : c'est ce qui fera la vitesse (slide MoE). Le chat template embarqué est la clé du tool calling à l'acte 2.");
 
-// 12 — Quantification
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 1 — Comprendre" });
-s.addText("La quantification : 16 Go → 6 Go, presque la même tête", { placeholder: "title" });
-s.addChart(pres.ChartType.bar, [
-  { name: "Taille du fichier modèle 8B", labels: ["FP16 (brut)", "Q8_0", "Q5_K_M (le nôtre)", "Q4_K_M"], values: [16.0, 8.6, 6.0, 4.8] },
-], {
-  x: 0.6, y: 1.6, w: 7.0, h: 4.6,
-  barDir: "col", chartColors: [MUTED, MUTED, GREEN, MUTED],
-  showTitle: false, showLegend: false,
-  showValue: true, dataLabelPosition: "outEnd", dataLabelColor: INK, dataLabelFontSize: 12, dataLabelFormatCode: '0.0" Go"',
-  catAxisLabelColor: INK, catAxisLabelFontSize: 12, catAxisLabelFontFace: "+mn-lt",
-  valAxisLabelColor: MUTED, valAxisLabelFontSize: 10, valAxisLabelFontFace: "+mn-lt",
-  valGridLine: { color: "D9E2EC", size: 1 }, catGridLine: { style: "none" },
-  dataLabelFontFace: "+mn-lt",
-});
-card(s, 8.0, 1.6, 4.7, 4.6);
-s.addText([
-  { text: "Le triangle", options: { bold: true, fontSize: 16, color: INK, breakLine: true } },
-  { text: "Taille · Vitesse · Qualité : en réduire un paye les autres.", options: { color: MUTED, breakLine: true } },
-  { text: "· Q4-Q5 : la perte de qualité est faible pour un gain énorme en mémoire et vitesse CPU.", options: { color: MUTED, breakLine: true } },
-  { text: "· GGUF = le format de llama.cpp, avec les variantes de quantification alignées sur la RAM dispo.", options: { color: MUTED, breakLine: true } },
-  { text: "· Le Q5_K_M de la slide : 6,0 Go mesurés sur le disque du serveur.", options: { bold: true, color: TEAL } },
-], { x: 8.32, y: 1.9, w: 4.1, h: 4.0, margin: 0, fontFace: SANS, fontSize: 14, valign: "top", paraSpaceAfter: 8 });
-s.addNotes("Quantification (3 min). LE pont vers le local : c'est ce qui rend la suite possible. Valeur Q5 mesurée sur disque (6,0 Go), les autres approximatives pour un 8B. Annoncer le live : « on va en télécharger un, là, maintenant ».");
-
-// 13 — Live 1
-s = pres.addSlide({ masterName: "MASTER_LIVE", sectionTitle: "Acte 1 — Comprendre" });
-liveBadge(s);
-s.addText("Hugging Face & llama.cpp, en direct", { placeholder: "title" });
-step(s, 1, 0.9, 3.1, 5.4, "La page du modèle", "huggingface.co/unsloth/LFM2.5-8B-A1B-GGUF : les fichiers GGUF par quantification, comme vu slide précédente.", true);
-step(s, 2, 0.9, 4.45, 5.4, "hf download, en direct", "On télécharge un petit modèle (~400 Mo) devant vous. Le temps de ma phrase.", true);
-step(s, 3, 6.9, 3.1, 5.5, "llama-cli répond", "Sur le CPU du laptop. Pas de clé API, pas de facture, pas de réseau — sauf pour le téléchargement.", true);
-s.addShape(pres.ShapeType.roundRect, { x: 6.9, y: 4.6, w: 5.5, h: 1.35, rectRadius: 0.1, fill: { color: CODEBG } });
-s.addText([
-  { text: "$ hf download unsloth/LFM2.5-8B-A1B-GGUF \\", options: { color: GREEN, breakLine: true } },
-  { text: "    --include \"...UD-Q5_K_M.gguf*\" \\", options: { color: CODEFG, breakLine: true } },
-  { text: "    --local-dir /models/LFM2.5-8B-A1B", options: { color: CODEFG } },
-], { x: 7.15, y: 4.75, w: 5.0, h: 1.05, margin: 0, fontFace: MONO, fontSize: 12, valign: "top" });
-actDots(s, 0, 6.6);
-s.addNotes("LIVE 1 (5-7 min). Script détaillé : presentation/SCENARIOS.md. Messages : un LLM se télécharge comme un paquet ; il tourne sur un CPU. Filet : captures HF + terminal si le réseau tombe.");
-
-/* =====================================================================
-   SECTION — ACTE 2 : AGIR
-===================================================================== */
-pres.addSection({ title: "Acte 2 — Agir" });
-
-// 14 — Diviseur acte 2
-s = pres.addSlide({ masterName: "MASTER_DIVISEUR", sectionTitle: "Acte 2 — Agir" });
-s.addText("ACTE 2 · AGIR", { x: 0.9, y: 2.15, w: 10, h: 0.4, margin: 0, fontFace: SANS, fontSize: 15, bold: true, color: GREEN, charSpacing: 3 });
-s.addText("Développement agentique : les harnais", { placeholder: "title" });
-actDots(s, 1, 4.7);
-s.addNotes("Transition : « ça discute — on l'a vu. Mais un chat ne développe rien. Ce qui manque : la boucle. »");
-
-// 15 — La boucle
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 2 — Agir" });
-s.addText("Du chat à l'agent : la boucle", { placeholder: "title" });
-chip(s, "Objectif\n« rends les tests verts »", 0.6, 3.0, 2.35, { h: 1.0, bold: true, fontSize: 13 });
-arrow(s, 3.0, 3.5, 3.55, 3.5);
-s.addShape(pres.ShapeType.roundRect, { x: 3.6, y: 3.0, w: 2.0, h: 1.0, rectRadius: 0.5, fill: { color: DARK } });
-s.addText("LLM", { x: 3.6, y: 3.0, w: 2.0, h: 1.0, align: "center", valign: "middle", margin: 0, fontFace: SANS, fontSize: 20, bold: true, color: WHITE });
-arrow(s, 5.65, 3.5, 6.2, 3.5);
-chip(s, "Tool call\nbash · edit · read", 6.25, 3.0, 2.2, { h: 1.0, fill: GREEN, bold: true, fontSize: 13, color: DARK });
-arrow(s, 8.5, 3.5, 9.05, 3.5);
-chip(s, "Outil\nexécute vraiment", 9.1, 3.0, 2.2, { h: 1.0, bold: true, fontSize: 13 });
-s.addShape(pres.ShapeType.line, { x: 10.2, y: 4.05, w: 0, h: 1.0, line: { color: TEAL, width: 2 } });
-s.addShape(pres.ShapeType.line, { x: 10.2, y: 5.05, w: -6.0, h: 0, line: { color: TEAL, width: 2 } });
-s.addShape(pres.ShapeType.line, { x: 4.2, y: 5.05, w: 0, h: -1.1, line: { color: TEAL, width: 2, endArrowType: "triangle" } });
-s.addText("résultat (sortie des tests, contenu du fichier…)", {
-  x: 5.2, y: 4.65, w: 4.2, h: 0.35, margin: 0, align: "center", fontFace: SANS, fontSize: 12, italic: true, color: MUTED,
-});
-s.addText("réponse finale", { x: 11.35, y: 2.92, w: 1.7, h: 0.35, margin: 0, align: "center", fontFace: SANS, fontSize: 12, italic: true, color: MUTED });
-arrow(s, 11.3, 3.5, 12.0, 3.5);
-card(s, 0.6, 5.8, 12.25, 1.0);
-s.addText([
-  { text: "L'innovation n'est pas dans le LLM — c'est le même moteur qu'à l'acte 1. ", options: { color: INK } },
-  { text: "Tout est dans la boucle : un modèle + des outils + un critère de réussite mesurable.", options: { bold: true, color: TEAL } },
-], { x: 0.95, y: 5.8, w: 11.6, h: 1.0, margin: 0, valign: "middle", fontFace: SANS, fontSize: 16 });
-s.addNotes("La boucle (3 min). LE diagramme du talk — le dessiner du doigt à l'écran. Insister : le LLM ne change pas, c'est le montage autour qui fait un agent. Le critère mesurable (tests) prépare le live.");
-
-// 16 — Tool calling
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 2 — Agir" });
-s.addText("Tool calling : appuyer sur des boutons", { placeholder: "title" });
-s.addText("Le harnais déclare ses outils (schéma JSON) ; le modèle ne renvoie pas du texte libre, mais un appel structuré :", {
-  x: 0.6, y: 1.5, w: 12.1, h: 0.65, margin: 0, fontFace: SANS, fontSize: 16, color: INK, valign: "top",
-});
-codeBlock(s, 0.6, 2.3, 7.2, 2.5, [
-  { t: "{", c: CODEFG },
-  { t: '  "name": "bash",', c: GREEN },
-  { t: '  "input": {', c: CODEFG },
-  { t: '    "command": "python3 -m unittest"', c: CODEFG },
-  { t: "  }", c: CODEFG },
-  { t: "}", c: CODEFG },
+// Chargement mmap
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A1 });
+s.addText("Charger un modèle : il est mappé, pas copié", { placeholder: "title" });
+chip(s, "Disque\n.gguf 5,9 Go", 0.6, 1.8, 2.3, { h: 1.1, bold: true, fontSize: 15 });
+arrow(s, 2.95, 2.35, 3.6, 2.35);
+chip(s, "Page cache de l'OS\n(RAM « buff/cache »)", 3.65, 1.8, 3.0, { h: 1.1, bold: true, fontSize: 15, fill: GREEN, color: DARK });
+arrow(s, 6.7, 2.35, 7.35, 2.35);
+chip(s, "llama.cpp\nlit les poids en place", 7.4, 1.8, 2.6, { h: 1.1, bold: true, fontSize: 15, fill: DARK, color: WHITE });
+s.addText("mmap", { x: 2.95, y: 1.85, w: 0.65, h: 0.3, margin: 0, align: "center", fontFace: MONO, fontSize: 12, bold: true, color: TEAL });
+codeBlock(s, 0.6, 3.25, 9.4, 1.0, [
+  { t: "load_tensors:  CPU model buffer size =     0.00 MiB", c: GREEN },
+  { t: "# zéro copie : les poids restent dans le page cache", c: CODEDIM },
 ], { fontSize: 14 });
-card(s, 8.1, 2.3, 4.6, 2.5);
-s.addText([
-  { text: "Le modèle n'exécute rien.", options: { bold: true, fontSize: 15, color: INK, breakLine: true } },
-  { text: "C'est le harnais qui lance la commande, récupère la sortie et la réinjecte dans le contexte du tour suivant.", options: { color: MUTED } },
-], { x: 8.42, y: 2.55, w: 4.0, h: 2.0, margin: 0, fontFace: SANS, fontSize: 14, valign: "top", paraSpaceAfter: 8 });
-card(s, 0.6, 5.15, 12.1, 1.6, DARK);
-s.addText([
-  { text: "Attention : ", options: { bold: true, color: AMBER } },
-  { text: "tous les modèles n'y arrivent pas aussi bien. Un petit modèle local peut rater ses appels d'outils — c'est un critère de choix, pas un détail. (On vérifie ça au live suivant.)", options: { color: WHITE } },
-], { x: 0.95, y: 5.15, w: 11.4, h: 1.6, margin: 0, valign: "middle", fontFace: SANS, fontSize: 16 });
-s.addNotes("Tool calling (2-3 min). Montrer le JSON : c'est exactement ce qui défilera au live 2. La mise en garde est honnête et crédibilise : les capacités de tool calling varient beaucoup entre modèles.");
+textCard(s, 0.6, 4.5, 9.4, 2.25, "Ce que ça change en pratique", [
+  "1er lancement lent (lecture disque), 2e instantané : le fichier est encore en cache.",
+  "free / top rangent les poids en « buff/cache », pas en « utilisé » : la RAM est bien prise.",
+  { t: "Si le fichier dépasse la RAM : relu depuis le disque à chaque token → des minutes par token.", c: RED, b: true },
+]);
+stat(s, 10.3, 1.8, 2.43, 2.45, "RAM ≥ fichier", "mmap change qui possède la mémoire, pas combien il en faut", { size: 22, labelSize: 13 });
+textCard(s, 10.3, 4.5, 2.43, 2.25, "Réglage", [
+  "-lm / --load-mode",
+  "(auto, mmap, mlock…)",
+  { t: "remplace --no-mmap et --mlock", b: true },
+], { fontSize: 13 });
+src(s, "Sources : llama.cpp src/llama-mmap.cpp, discussion #638, tools/server/README (-lm) · log mesuré sur le laptop (Spark-X2.5-4B), build 7fe450e.");
+s.addNotes("Chargement (2 min). Erreur répandue : « mmap permet de faire tourner un modèle plus gros que la RAM ». Faux en pratique : il sera relu depuis le disque à chaque token. La ligne de log 0.00 MiB est la preuve de la zéro-copie. Les anciens tutos parlent de --no-mmap/--mlock : dans la version épinglée, c'est -lm.");
 
-// 17 — Contexte ressource rare
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 2 — Agir" });
-s.addText("Le contexte est la ressource rare", { placeholder: "title" });
-s.addText("Rappel de l'acte 1 : chaque tour repaie toute la fenêtre. Un agent, c'est une conversation qui grossit vite :", {
-  x: 0.6, y: 1.5, w: 12.1, h: 0.6, margin: 0, fontFace: SANS, fontSize: 16, color: INK, valign: "top",
+// Quantification
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A1 });
+s.addText("Quantifier : 15 GiB → 4,6 GiB, presque la même tête", { placeholder: "title" });
+s.addChart(pres.ChartType.bar, [
+  { name: "Taille (GiB) — Llama 3 8B", labels: ["F16", "Q8_0", "Q6_K", "Q5_K_M", "Q4_K_M", "Q3_K_M", "Q2_K"], values: [14.97, 7.96, 6.14, 5.33, 4.58, 3.74, 2.96] },
+], chartOpts({
+  x: 0.6, y: 1.45, w: 6.9, h: 3.65, barDir: "col",
+  chartColors: [MUTED, MUTED, MUTED, MUTED, GREEN, MUTED, RED],
+  dataLabelFormatCode: '0.0" GiB"', valAxisHidden: true, valGridLine: { style: "none" },
+}));
+s.addText("Écart à l'original (KLD) : Q8_0 0,001 · Q6_K 0,006 · Q5_K_M 0,011 · Q4_K_M 0,028 · Q3_K_M 0,084 · Q2_K 0,445", {
+  x: 0.6, y: 5.15, w: 6.9, h: 0.6, margin: 0, fontFace: SANS, fontSize: 13, color: MUTED, valign: "top",
 });
-const budget = [
-  ["Prompt système + AGENTS.md", 2.6, DARK, WHITE],
-  ["Outils déclarés + résultats des tours précédents", 3.9, TEAL, WHITE],
-  ["Fichiers lus (le code !)", 3.0, GREEN, DARK],
-  ["Place restante pour raisonner", 2.4, TINT, MUTED],
+textCard(s, 7.85, 1.45, 4.88, 4.3, "Lire le graphique", [
+  "Les poids sont stockés par blocs, avec un facteur d'échelle par bloc : moins de bits par poids.",
+  { t: "Go ≈ milliards de paramètres × bits par poids ÷ 8", b: true },
+  "Q4_K_M ≈ 4,9 bits → ~0,6 Go par milliard.",
+  "Q4_K_M est le coude : ÷3,3 en taille pour un écart minime. Sous 3 bits, la qualité s'effondre.",
+]);
+strip(s, 5.95, [
+  { text: "Un gros modèle quantifié bat un petit modèle entier : ", options: { color: WHITE } },
+  { text: "13B en Q4_K_M (7,3 Go) > 7B en F16 (13 Go).", options: { bold: true, color: GREEN } },
+], { h: 0.8 });
+src(s, "Sources : llama.cpp tools/perplexity/README (Llama 3 8B, KLD vs F16) · PR #1684 (PPL 5,30 vs 5,91) · Dettmers & Zettlemoyer, arXiv:2212.09720 (« 4-bit is almost universally optimal »).");
+s.addNotes("Quantification (3 min). Le geste d'achat : prendre Q4_K_M par défaut (c'est aussi le défaut de llama-server -hf), monter en Q5/Q6 si la RAM le permet. La règle Go ≈ B × bpw / 8 permet de répondre à la question du sondage : un 8B en Q4_K_M ≈ 5 Go. Suffixes : _S/_M/_L = tenseurs sensibles en plus haute précision (PR #1684) ; UD-/imatrix = quant calibré (revendication éditeur). Tendance : modèles livrés déjà quantifiés (MXFP4 de gpt-oss, QAT).");
+
+// Prefill vs decode
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A1 });
+s.addText("Prefill lit, decode écrit — pas au même prix", { placeholder: "title" });
+textCard(s, 0.6, 1.5, 5.9, 2.35, "Prefill · le prompt d'un coup", [
+  "Tous les tokens du prompt sont traités en parallèle et remplissent le KV cache.",
+  { t: "Limité par le calcul. Mesure : temps avant le 1er mot (TTFT).", b: true },
+]);
+textCard(s, 6.83, 1.5, 5.9, 2.35, "Decode · un token à la fois", [
+  "Pour chaque token : relire tous les poids actifs, produire un score par token possible, tirer au sort.",
+  { t: "Limité par la bande passante mémoire. Mesure : tok/s.", b: true },
+]);
+strip(s, 4.05, [
+  { text: "tok/s en decode  ≲  bande passante mémoire  ÷  octets des poids actifs", options: { bold: true, color: GREEN, fontFace: SERIF, fontSize: 22 } },
+], { h: 0.85 });
+const ppRows = [
+  [{ text: "Mesuré", options: { bold: true, color: WHITE, fill: { color: DARK } } }, { text: "Prefill", options: { bold: true, color: WHITE, fill: { color: DARK } } }, { text: "Decode", options: { bold: true, color: WHITE, fill: { color: DARK } } }, { text: "Rapport", options: { bold: true, color: WHITE, fill: { color: DARK } } }],
+  [{ text: "Laptop CPU (LFM2.5-8B-A1B)", options: { bold: true } }, "98 t/s", "26 – 35 t/s", { text: "× 2 à 4", options: { bold: true, color: RED } }],
+  [{ text: "Serveur LAN (Qwen3.8-Flash-Next)", options: { bold: true } }, "912 t/s", "36 t/s", { text: "× 25", options: { bold: true, color: TEAL } }],
 ];
-let bx = 0.6;
-budget.forEach(([lbl, wd, fill, fg]) => {
-  s.addShape(pres.ShapeType.rect, { x: bx, y: 2.35, w: wd, h: 0.9, fill: { color: fill } });
-  s.addText(lbl, { x: bx + 0.1, y: 2.35, w: wd - 0.2, h: 0.9, margin: 0, valign: "middle", fontFace: SANS, fontSize: 12, bold: true, color: fg });
-  bx += wd;
+s.addTable(ppRows, {
+  x: 0.6, y: 5.12, w: 12.13, colW: [4.73, 2.4, 2.6, 2.4],
+  fontFace: SANS, fontSize: 14, color: INK, valign: "middle",
+  border: { type: "solid", color: "D3DCE6", pt: 0.75 }, fill: { color: WHITE }, rowH: 0.48, autoPage: false,
 });
-s.addShape(pres.ShapeType.line, { x: 0.6, y: 2.2, w: 11.9, h: 0, line: { color: INK, width: 1.5 } });
-s.addText("fenêtre de contexte (262 144 tokens ici)", { x: 0.6, y: 3.35, w: 11.9, h: 0.35, margin: 0, align: "center", fontFace: SANS, fontSize: 12, italic: true, color: MUTED });
-card(s, 0.6, 4.15, 12.25, 2.4);
-s.addText([
-  { text: "Ce que font les bons harnais (et les bons drivers)", options: { bold: true, fontSize: 16, color: INK, breakLine: true } },
-  { text: "· Lisent peu : grep avant lecture complète, extraient plutôt que verser.", options: { color: MUTED, breakLine: true } },
-  { text: "· Compactent : résument les tours anciens pour libérer de la fenêtre.", options: { color: MUTED, breakLine: true } },
-  { text: "· Externalisent : notes, fichiers, skills — ce qui doit survivre sort de la conversation.", options: { color: MUTED, breakLine: true } },
-  { text: "· Un AGENTS.md court et précis bat un pavé : chaque ligne est payée à chaque tour.", options: { bold: true, color: TEAL } },
-], { x: 0.95, y: 4.4, w: 11.6, h: 2.0, margin: 0, fontFace: SANS, fontSize: 14.5, valign: "top", paraSpaceAfter: 7 });
-s.addNotes("Contexte ressource rare (2-3 min). La barre : le budget réel d'un agent en pleine tâche. C'est LE conseil pratique de l'acte — les gens peuvent l'appliquer dès demain avec n'importe quel harnais.");
+src(s, "Mesures : llama-bench -p 512 -n 128 (laptop, 05/10/2026) · /metrics du serveur (prompt_tokens_seconds, predicted_tokens_seconds).");
+s.addNotes("LA slide pivot (3 min). Deux phases, deux goulots. Sur CPU, le prefill n'est que 2 à 4 fois plus rapide que le decode — et non « un à deux ordres de grandeur » comme on le lit (c'est vrai sur GPU). Conséquence, à garder pour l'acte 2 : un agent qui envoie 10 000 tokens de prompt attend longtemps son premier mot sur un CPU.");
 
-// 18 — KV cache + vitesse
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 2 — Agir" });
-s.addText("Pourquoi ça ralentit — et à quelle vitesse ça va", { placeholder: "title" });
-card(s, 0.6, 1.6, 7.0, 4.8);
-s.addText([
-  { text: "Le KV cache, en une image", options: { bold: true, fontSize: 17, color: INK, breakLine: true } },
-  { text: "Pour ne pas recalculer tout le passé à chaque token, le modèle met en mémoire ses calculs intermédiaires (les clés et valeurs d'attention).", options: { color: MUTED, breakLine: true } },
-  { text: "· Plus la conversation est longue, plus le cache est gros : il mange la mémoire vive avant la fenêtre théorique.", options: { color: MUTED, breakLine: true } },
-  { text: "· Le premier token d'une longue requête est lent (prefill) ; les suivants sont rapides (décode).", options: { color: MUTED, breakLine: true } },
-  { text: "· Un agent qui lit dix fichiers « paye » ces dix fichiers à chaque tour suivant.", options: { color: MUTED } },
-], { x: 0.95, y: 1.9, w: 6.3, h: 4.2, margin: 0, fontFace: SANS, fontSize: 15, valign: "top", paraSpaceAfter: 9 });
-card(s, 7.95, 1.6, 4.8, 2.2, DARK);
-s.addText("≈ 35 tok/s", { x: 7.95, y: 1.85, w: 4.8, h: 0.95, margin: 0, align: "center", fontFace: SERIF, fontSize: 44, bold: true, color: GREEN });
-s.addText("génération — llama-server sur CPU, mesuré", { x: 8.2, y: 2.85, w: 4.3, h: 0.5, margin: 0, align: "center", fontFace: SANS, fontSize: 13, color: ON_DARK_MUT });
-card(s, 7.95, 4.05, 4.8, 2.35);
-s.addText("262 144", { x: 7.95, y: 4.3, w: 4.8, h: 0.85, margin: 0, align: "center", fontFace: SERIF, fontSize: 40, bold: true, color: TEAL });
-s.addText("tokens de fenêtre sur notre serveur local — de quoi tenir une vraie session agentique", { x: 8.25, y: 5.2, w: 4.2, h: 1.0, margin: 0, align: "center", fontFace: SANS, fontSize: 13, color: MUTED });
-s.addNotes("KV cache (2 min). Payer la banque d'acte 1 : la fenêtre a un coût mémoire. Les deux stats sont mesurées sur NOTRE matériel (35 tok/s au benchmark API) — pas des chiffres brochure.");
+// Bande passante — MoE vs dense mesuré
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A1 });
+s.addText("Mesuré sur ce laptop : le decode lit la mémoire", { placeholder: "title" });
+s.addChart(pres.ChartType.bar, [
+  { name: "Decode (tok/s, 6 threads)", labels: ["Spark-X2.5-4B (dense) · 2,4 GiB", "LFM2.5-8B-A1B (MoE) · 5,9 GiB"], values: [14.8, 34.6] },
+], chartOpts({
+  x: 0.6, y: 1.45, w: 6.6, h: 4.3, barDir: "bar",
+  chartColors: [MUTED, GREEN], dataLabelFormatCode: '0.0" tok/s"', dataLabelFontSize: 14,
+  catAxisLabelFontSize: 13, valAxisHidden: true, valGridLine: { style: "none" }, valAxisMaxVal: 42,
+}));
+textCard(s, 7.5, 1.45, 5.23, 2.4, "Même bande passante effective", [
+  { t: "Dense : 2,4 Go relus × 14,8 t/s ≈ 38 Go/s", c: INK },
+  { t: "MoE : ~1,1 Go actifs × 34,6 t/s ≈ 39 Go/s", c: INK },
+  "Le CPU ne calcule presque pas : il attend la mémoire.",
+], { fontSize: 15 });
+textCard(s, 7.5, 4.05, 5.23, 1.7, "Plus de threads ≠ plus vite", [
+  "6 threads (P-cores) → 34,6 t/s",
+  { t: "14 threads (+ E-cores) → 26,4 t/s : −24 %", c: RED, b: true },
+]);
+strip(s, 5.95, [
+  { text: "Fichier 2,4× plus gros, decode 2,3× plus rapide : ", options: { color: WHITE } },
+  { text: "seuls les poids actifs sont relus.", options: { bold: true, color: GREEN } },
+], { h: 0.8 });
+src(s, "Mesures : llama-bench tg128, -t 6,14, i7-1370P, 30 Go, 05/10/2026 (docs/research/mesures-2026-10-05.md). Octets actifs du MoE : estimation.");
+s.addNotes("Preuve (2 min). Deux modèles très différents, une même limite : ~38 Go/s, la bande passante réelle de la RAM de ce laptop. C'est la règle de la slide précédente vérifiée en vrai. Threads : llama.cpp sans -t exclut déjà les E-cores et l'hyperthreading (6 ici) ; ajouter des threads sature la mémoire et ajoute de la synchronisation.");
 
-// 19 — Le branchement
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 2 — Agir" });
-s.addText("Le branchement : dix lignes de configuration", { placeholder: "title" });
-codeBlock(s, 0.6, 1.6, 6.6, 4.0, [
-  { t: '"providers": {', c: CODEFG },
-  { t: '  "llama.cpp": {', c: GREEN },
-  { t: '    "package": "…/openai-compatible",', c: CODEFG },
-  { t: '    "settings": {', c: CODEFG },
-  { t: '      "baseURL":', c: CODEFG },
-  { t: '        "http://192.168.0.110:8080/v1"', c: AMBER },
-  { t: '    }', c: CODEFG },
+// KV cache
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A1 });
+s.addText("Le KV cache : la mémoire de la conversation", { placeholder: "title" });
+textCard(s, 0.6, 1.45, 5.6, 2.15, "Ce que c'est", [
+  "Pour chaque token déjà lu, chaque couche d'attention garde ses clés et valeurs (K, V) : on ne recalcule pas le passé à chaque nouveau token.",
+  { t: "Réservé en entier au démarrage, pour tout -c.", b: true },
+]);
+codeBlock(s, 0.6, 3.8, 5.6, 1.9, [
+  { t: "2 × couches × têtes KV × dim tête", c: GREEN, b: true },
+  { t: "  × octets × tokens", c: GREEN, b: true },
+  { t: "", c: CODEFG },
+  { t: "Llama-3.1-8B : 2×32×8×128×2 o", c: CODEFG },
+  { t: "  = 128 Kio/token → 16 Gio à 128k", c: AMBER },
+], { fontSize: 14 });
+s.addChart(pres.ChartType.bar, [
+  { name: "KV cache à 128k tokens (GiB)", labels: ["Dense type Llama-3.1-8B (calcul)", "Spark-X2.5-4B (9 couches globales)", "LFM2.5-8B-A1B (6 couches d'attention)", "LFM2.5-8B-A1B, cache q8_0"], values: [16, 4.6, 1.5, 0.8] },
+], chartOpts({
+  x: 6.5, y: 1.45, w: 6.23, h: 4.25, barDir: "bar",
+  chartColors: [RED, MUTED, GREEN, TEAL], dataLabelFormatCode: '0.0" GiB"', dataLabelFontSize: 13,
+  catAxisLabelFontSize: 12, valAxisHidden: true, valGridLine: { style: "none" }, valAxisMaxVal: 20,
+  catAxisOrientation: "maxMin",
+}));
+strip(s, 5.95, [
+  { text: "Le contexte se paie en RAM, ", options: { color: WHITE } },
+  { text: "et l'architecture change tout : de 1,5 à 16 GiB pour la même longueur.", options: { bold: true, color: GREEN } },
+], { h: 0.8 });
+src(s, "Mesuré : ligne « llama_kv_cache: size = … MiB » des logs llama.cpp (laptop, 05/10/2026). La formule se vérifie à l'octet près sur les deux modèles mesurés.");
+s.addNotes("KV cache (3 min). Le K et le V : ce que chaque couche d'attention a calculé pour les tokens passés. La formule est vérifiable : LFM2.5 = 6 couches × 8 têtes × 64 × 2 × 2 o = 12 Kio/token → 384 MiB à 32k, exactement la valeur du log. Les modèles récents réduisent ce coût : moins de têtes KV (GQA), couches sans attention (hybrides conv/SSM), fenêtre glissante. Le cache est réservé au démarrage : pas de surprise en cours de route, mais une grosse réservation si -c est grand. Leviers : -c (ne réserver que ce qu'on utilise : Qwen3-0.6B 4 480 MiB par défaut, ~450 MiB avec -c 4096), -ctk/-ctv q8_0 (÷1,9, le V quantifié exige flash attention, auto), et surtout le choix du modèle. Piège mesuré : llama-server sans option ouvre 4 slots → 163 840 tokens → 17,9 GiB de KV pour un modèle de 373 Mo ; fixer -c et -np 1. Autre piège : --fit (défaut) peut réduire le contexte en silence.");
+
+// MoE
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A1 });
+s.addText("MoE : la RAM paie le total, la vitesse paie l'actif", { placeholder: "title" });
+// experts grid
+s.addText("Pour chaque token, un routeur choisit quelques experts :", { x: 0.6, y: 1.45, w: 6.2, h: 0.4, margin: 0, fontFace: SANS, fontSize: 15, color: INK });
+chip(s, "routeur", 0.6, 2.95, 1.2, { h: 0.6, bold: true, fontSize: 14, fill: DARK, color: WHITE });
+const hotCells = new Set([3, 18, 22, 37, 41, 50, 59, 66, 79, 85, 94]);
+for (let r = 0; r < 6; r++) {
+  for (let c = 0; c < 16; c++) {
+    const idx = r * 16 + c;
+    s.addShape(pres.ShapeType.rect, {
+      x: 2.1 + c * 0.29, y: 2.0 + r * 0.42, w: 0.23, h: 0.34,
+      fill: { color: hotCells.has(idx) ? GREEN : TINT }, line: { color: hotCells.has(idx) ? GREEN : "C9D4E2", width: 0.5 },
+    });
+  }
+}
+arrow(s, 1.82, 3.25, 2.05, 3.25);
+s.addText("512 experts dans le modèle du serveur : 10 routés + 1 partagé par token (≈ 2 % actifs)", { x: 2.1, y: 4.6, w: 4.7, h: 0.6, margin: 0, fontFace: SANS, fontSize: 13, italic: true, color: MUTED, valign: "top" });
+stat(s, 7.2, 1.45, 2.65, 1.85, "177 B", "paramètres au total → 111 Go de RAM", { size: 36 });
+stat(s, 10.08, 1.45, 2.65, 1.85, "6 B", "actifs par token → ~36 tok/s", { size: 36 });
+textCard(s, 7.2, 3.55, 5.53, 1.75, "Bonus : décodage spéculatif (MTP)", [
+  "Le modèle propose plusieurs tokens d'avance et les vérifie en une passe : 61 % acceptés, ~2,8 tokens par passe sur le serveur.",
+], { fontSize: 13 });
+strip(s, 5.6, [
+  { text: "Le secret du local en 2026 : ", options: { color: WHITE } },
+  { text: "de gros modèles MoE avec peu de paramètres actifs, et beaucoup de RAM.", options: { bold: true, color: GREEN } },
+], { h: 0.9 });
+src(s, "Sources : model card Qwen3.8-Flash-Next (125 B MoE dont 6 B actifs + 51 B embedding n-gram + 4 B MTP) · /v1/models et /metrics du serveur (n_params, spec_decode_*), 05/10/2026.");
+s.addNotes("MoE (2 min). Tous les poids doivent être en RAM (le routeur peut choisir n'importe quel expert au token suivant), mais seuls ceux des experts choisis sont relus : la vitesse suit les paramètres actifs. Le serveur de la démo : ~177 B au compteur de llama-server, 111 Go de fichier, mais 6 B actifs. Le décodage spéculatif (têtes MTP) explique une partie des 36 tok/s : ✂ coupable en version 60 min.");
+
+// Dimensionner
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A1 });
+s.addText("Dimensionner avant de télécharger", { placeholder: "title" });
+stat(s, 0.6, 1.45, 5.9, 1.55, "RAM ≈ poids + KV cache + ~0,3 Go", "fichier .gguf · contexte réservé (-c) · tampons de calcul", { size: 24, labelSize: 13 });
+stat(s, 6.83, 1.45, 5.9, 1.55, "tok/s ≈ bande passante ÷ poids actifs", "Go/s de la mémoire · octets relus par token", { size: 24, labelSize: 13 });
+codeBlock(s, 0.6, 3.2, 5.9, 2.3, [
+  { t: "# Ce laptop · LFM2.5-8B-A1B Q5_K_M", c: CODEDIM },
+  { t: "RAM  = 5,9 + 0,4 (32k) + 0,1", c: CODEFG },
+  { t: "     ≈ 6,4 Go           ✓ sur 30 Go", c: GREEN, b: true },
+  { t: "tok/s ≈ 38 Go/s ÷ ~1,1 Go", c: CODEFG },
+  { t: "     ≈ 35 t/s    ✓ mesuré : 34,6", c: GREEN, b: true },
+], { fontSize: 14 });
+const sizeRows = [
+  [{ text: "Machine", options: { bold: true, color: WHITE, fill: { color: DARK } } }, { text: "Ce qui y tourne bien", options: { bold: true, color: WHITE, fill: { color: DARK } } }],
+  [{ text: "Laptop 16–32 Go, CPU", options: { bold: true } }, "Chat, complétion : MoE de 4–8 B, ~30 t/s"],
+  [{ text: "64–128 Go, mémoire rapide", options: { bold: true } }, "Agent de code : MoE de 30 à 120 B"],
+  [{ text: "Serveur de la démo", options: { bold: true } }, "MoE 177 B (6 B actifs), 111 Go"],
+];
+s.addTable(sizeRows, {
+  x: 6.83, y: 3.2, w: 5.9, colW: [2.5, 3.4],
+  fontFace: SANS, fontSize: 14, color: INK, valign: "middle",
+  border: { type: "solid", color: "D3DCE6", pt: 0.75 }, fill: { color: WHITE }, rowH: 0.56, autoPage: false,
+});
+strip(s, 5.75, [
+  { text: "Réponse au sondage : ", options: { bold: true, color: GREEN } },
+  { text: "un 8B en Q4_K_M ≈ 5 Go de poids — il tient sur votre laptop. S'il est MoE, il y est même rapide.", options: { color: WHITE } },
+], { h: 0.95 });
+src(s, "Mesures laptop 05/10/2026 · règles déduites des sources de l'acte (quantize/perplexity README, Databricks « LLM inference performance engineering »).");
+s.addNotes("Dimensionner (2 min). Les deux formules suffisent pour 90 % des décisions. Le calcul pour le laptop tombe juste sur la mesure. Honnêteté : le chat tient sur un laptop ; l'agent de la démo a besoin d'une machine à ~128 Go — on verra pourquoi à l'acte 2 (le prefill). ✂ Sampling en une ligne si le temps le permet : le serveur applique ses defaults (temperature 1.0, top_p 0.95, min_p 0.05, lus dans /props).");
+
+// Live 1
+s = pres.addSlide({ masterName: "MASTER_LIVE", sectionTitle: S_A1 });
+liveBadge(s);
+s.addText("De Hugging Face à la ligne de log", { placeholder: "title" });
+step(s, 1, 0.9, 2.95, 5.6, "Lire une page de modèle", "unsloth/LFM2.5-8B-A1B-GGUF : les quants et leurs tailles, avec la règle Go ≈ B × bits ÷ 8.", true);
+step(s, 2, 0.9, 4.15, 5.6, "hf download, 397 Mo", "Qwen3-0.6B en Q4_K_M, téléchargé pendant la phrase.", true);
+step(s, 3, 0.9, 5.35, 5.6, "llama-cli : lire le log", "KV cache 4 480 MiB pour 373 Mo de poids. Puis -c 4096 : ~450 MiB.", true);
+codeBlock(s, 6.9, 2.95, 5.6, 2.8, [
+  { t: "$ hf download unsloth/Qwen3-0.6B-GGUF \\", c: GREEN },
+  { t: "    --include \"Qwen3-0.6B-Q4_K_M.gguf\" \\", c: CODEFG },
+  { t: "    --local-dir /models/Qwen3-0.6B", c: CODEFG },
+  { t: "$ llama-cli -m …/Qwen3-0.6B-Q4_K_M.gguf \\", c: GREEN },
+  { t: "    -p Bonjour -st -v 2>&1 \\", c: CODEFG },
+  { t: "  | grep -E \"kv_cache|Prompt:\"", c: CODEFG },
+  { t: "llama_kv_cache: size = 4480.00 MiB", c: AMBER, b: true },
+  { t: "[ Prompt: 330.7 t/s | Generation: 97.3 t/s ]", c: CODEDIM },
+], { fontSize: 12 });
+s.addText("× 12 : la mémoire de la conversation pèse douze fois le modèle.", { x: 6.9, y: 5.85, w: 5.6, h: 0.5, margin: 0, fontFace: SANS, fontSize: 15, bold: true, color: GREEN });
+actDots(s, 0, 6.6);
+s.addNotes("LIVE 1 (7 min). Script : presentation/SCENARIOS.md. Points à montrer : (1) les tailles sur la page HF ; (2) le téléchargement ; (3) la ligne llama_kv_cache et le breakdown model/context ; (4) la relance avec -c 4096 ; (5) la ligne de timings Prompt/Generation : prefill et decode en vrai. Filet : modèle pré-téléchargé + HF_HUB_OFFLINE=1, captures des logs.");
+
+/* =====================================================================
+   ACTE 2 — ORCHESTRER (~27 min dont lives 10 + 5)
+===================================================================== */
+pres.addSection({ title: S_A2 });
+
+divider(S_A2, "ACTE 2 · ORCHESTRER", "Le harnais et sa conversation avec le LLM", 1,
+  "Transition : « Ça discute, et on sait pourquoi c'est rapide ou lent. Mais un chat ne corrige pas un bug. » Question de l'acte : qu'est-ce qu'un agent envoie au modèle, et pourquoi ça marche ?");
+
+// Fonction sans état
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A2 });
+s.addText("Le modèle est une fonction sans état", { placeholder: "title" });
+chip(s, "texte", 0.6, 1.75, 1.6, { h: 0.8, bold: true, fontSize: 18 });
+arrow(s, 2.25, 2.15, 2.9, 2.15);
+chip(s, "LLM", 2.95, 1.6, 2.2, { h: 1.1, bold: true, fontSize: 24, fill: DARK, color: WHITE });
+arrow(s, 5.2, 2.15, 5.85, 2.15);
+chip(s, "texte", 5.9, 1.75, 1.6, { h: 0.8, bold: true, fontSize: 18 });
+s.addText("Il ne garde rien d'une requête à l'autre. Tout ce qui ressemble à de la mémoire, des outils ou de l'autonomie est fait par le programme autour : le harnais.", {
+  x: 0.6, y: 3.0, w: 6.9, h: 1.3, margin: 0, fontFace: SANS, fontSize: 17, color: INK, valign: "top",
+});
+strip(s, 5.0, [
+  { text: "Harnais = ", options: { bold: true, color: GREEN } },
+  { text: "boucle + outils + mémoire + permissions, autour d'un modèle qui ne fait que compléter du texte.", options: { color: WHITE } },
+], { h: 1.3, fontSize: 17 });
+const roles = [
+  [{ text: "Qui", options: { bold: true, color: WHITE, fill: { color: DARK } } }, { text: "Fait quoi", options: { bold: true, color: WHITE, fill: { color: DARK } } }],
+  [{ text: "Modèle", options: { bold: true } }, "choisit l'outil et les arguments (du texte)"],
+  [{ text: "Template Jinja", options: { bold: true } }, "traduit JSON ⇄ texte balisé"],
+  [{ text: "llama-server", options: { bold: true } }, "parse les appels, KV cache"],
+  [{ text: "Harnais", options: { bold: true } }, "prompts, exécution, contexte"],
+  [{ text: "Vous", options: { bold: true, color: TEAL } }, "AGENTS.md, skills, permissions"],
+];
+s.addTable(roles, {
+  x: 7.85, y: 1.5, w: 4.88, colW: [1.75, 3.13],
+  fontFace: SANS, fontSize: 14, color: INK, valign: "middle",
+  border: { type: "solid", color: "D3DCE6", pt: 0.75 }, fill: { color: WHITE }, rowH: 0.5, autoPage: false,
+});
+s.addNotes("Sans état (2 min). Point fondateur de l'acte : à chaque tour, le harnais renvoie TOUT au modèle. Le tableau « qui fait quoi » est la grille de lecture des slides suivantes.");
+
+// Anatomie
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A2 });
+s.addText("Anatomie d'une requête d'agent", { placeholder: "title" });
+const stack = [
+  ["Schémas des outils (read, edit, shell…)", 0.5, DARK, WHITE],
+  ["Prompt système du harnais", 0.42, DARK, WHITE],
+  ["AGENTS.md du projet", 0.42, TEAL, WHITE],
+  ["Liste des skills (nom + description)", 0.62, TEAL, WHITE],
+  ["Date, environnement", 0.36, TEAL, WHITE],
+  ["Votre question", 0.42, AMBER, DARK],
+  ["Historique + résultats d'outils (grossit à chaque tour)", 1.25, TINT, INK],
+];
+let sy = 1.5;
+stack.forEach(([lbl, hh, fill, fg]) => {
+  s.addShape(pres.ShapeType.rect, { x: 0.6, y: sy, w: 6.4, h: hh, fill: { color: fill }, line: { color: WHITE, width: 1 } });
+  s.addText(lbl, { x: 0.8, y: sy, w: 6.0, h: hh, margin: 0, valign: "middle", fontFace: SANS, fontSize: 14, bold: true, color: fg });
+  sy += hh;
+});
+s.addText("préfixe stable", { x: 7.1, y: 1.5, w: 1.6, h: 2.32, margin: 0, valign: "middle", fontFace: SANS, fontSize: 13, bold: true, color: TEAL });
+s.addText("append-only", { x: 7.1, y: 4.24, w: 1.6, h: 1.25, margin: 0, valign: "middle", fontFace: SANS, fontSize: 13, bold: true, color: MUTED });
+stat(s, 8.75, 1.5, 3.98, 2.0, "~10 000", "tokens envoyés avant même votre question (1er tour, mesuré)", { size: 44 });
+stat(s, 8.75, 3.7, 3.98, 1.8, "~3 800", "tokens rien que pour la liste des 49 skills de ce repo", { size: 36, dark: false });
+strip(s, 5.85, [
+  { text: "Chaque ligne d'AGENTS.md, chaque skill installée, chaque outil MCP ", options: { color: WHITE } },
+  { text: "est payé à chaque tour.", options: { bold: true, color: GREEN } },
+], { h: 0.8 });
+src(s, "Mesuré : base locale d'OpenCode v2.0.21 (tokens.input au 1er tour : 9 492 – 9 653 dans ce repo ; skill-guidance 15 203 caractères ≈ 3 800 tokens, estimation 4 car./token).");
+s.addNotes("Anatomie (3 min). L'ordre est l'ordre réel : les outils sont écrits en tête par le template Qwen, puis les blocs du harnais du plus stable au plus variable. Ce n'est pas un hasard : le préfixe stable est ce que le KV cache pourra réutiliser (slide « cache de prompt »).");
+
+// Tool calling
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A2 });
+s.addText("Le tool calling, c'est du texte et un parser", { placeholder: "title" });
+codeBlock(s, 0.6, 1.45, 6.9, 5.3, [
+  { t: "<|im_start|>system", c: CODEDIM },
+  { t: "# Tools", c: CODEFG },
+  { t: "<tools>{\"name\": \"read\", \"parameters\": …}</tools>", c: CODEFG },
+  { t: "…You are an AI agent running in OpenCode…", c: CODEDIM },
+  { t: "<|im_start|>user", c: CODEDIM },
+  { t: "Corrige le test qui échoue dans calc.py", c: AMBER },
+  { t: "<|im_start|>assistant", c: CODEDIM },
+  { t: "<think>Je dois d'abord lire calc.py.</think>", c: CODEDIM },
+  { t: "<tool_call>", c: GREEN, b: true },
+  { t: "<function=read>", c: GREEN, b: true },
+  { t: "<parameter=path>calc.py</parameter>", c: GREEN, b: true },
+  { t: "</function></tool_call>", c: GREEN, b: true },
+  { t: "<|im_start|>user", c: CODEDIM },
+  { t: "<tool_response>", c: CODEFG },
+  { t: "2:     return a - b", c: CODEFG },
+  { t: "</tool_response>", c: CODEFG },
+], { fontSize: 12 });
+const tc = [
+  "Le harnais envoie tools (schémas JSON)",
+  "Le template les écrit dans le prompt",
+  "Le modèle génère <tool_call>…",
+  "llama-server parse → tool_calls JSON",
+  "Le harnais exécute l'outil",
+  "Le résultat revient en <tool_response>",
+];
+tc.forEach((t, i) => {
+  const y = 1.5 + i * 0.6;
+  s.addShape(pres.ShapeType.ellipse, { x: 7.85, y, w: 0.42, h: 0.42, fill: { color: i === 2 || i === 3 ? GREEN : TEAL } });
+  s.addText(String(i + 1), { x: 7.85, y, w: 0.42, h: 0.42, margin: 0, align: "center", valign: "middle", fontFace: SANS, fontSize: 14, bold: true, color: WHITE });
+  s.addText(t, { x: 8.42, y: y - 0.04, w: 4.3, h: 0.5, margin: 0, valign: "middle", fontFace: SANS, fontSize: 14, color: INK });
+});
+textCard(s, 7.85, 5.2, 4.88, 1.55, null, [
+  { t: "Grammaire « lazy » : dès <tool_call>, la sortie est contrainte au schéma.", c: INK },
+  { t: "Template inconnu → mode Generic, moins fiable.", c: RED, b: true },
+], { fontSize: 13, space: 4 });
+src(s, "Rendu réel du chat_template.jinja de Qwen3.8-Flash-Next (extraits) · llama.cpp docs/function-calling.md, common/chat.cpp (parser Qwen3-Coder, grammaire lazy).");
+s.addNotes("Tool calling (3 min). Le modèle n'appelle rien : il écrit du texte dans un format convenu (ici le XML de Qwen). Le serveur reconnaît ce format, le transforme en tool_calls JSON pour le harnais, et peut même contraindre la génération à rester dans le schéma dès que <tool_call> apparaît. Le résultat de l'outil revient au modèle comme un message utilisateur. C'est pourquoi le choix du modèle ET de son template compte autant que sa taille.");
+
+// La boucle
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A2 });
+s.addText("La boucle — et quand elle s'arrête", { placeholder: "title" });
+chip(s, "Vous :\n« rends les tests verts »", 0.6, 2.2, 2.4, { h: 1.0, bold: true, fontSize: 14, fill: AMBER, color: DARK });
+arrow(s, 3.05, 2.7, 3.55, 2.7);
+chip(s, "LLM", 3.6, 2.2, 1.6, { h: 1.0, bold: true, fontSize: 20, fill: DARK, color: WHITE });
+arrow(s, 5.25, 2.7, 5.75, 2.7);
+chip(s, "tool_call ?", 5.8, 2.2, 1.7, { h: 1.0, bold: true, fontSize: 15, line: TEAL, lineW: 1.5, fill: WHITE });
+arrow(s, 7.55, 2.7, 8.05, 2.7);
+s.addText("oui", { x: 7.5, y: 2.3, w: 0.6, h: 0.3, margin: 0, align: "center", fontFace: SANS, fontSize: 12, bold: true, color: GREEN });
+chip(s, "permission\nallow · ask · deny", 8.1, 2.2, 2.0, { h: 1.0, bold: true, fontSize: 13 });
+arrow(s, 10.15, 2.7, 10.65, 2.7);
+chip(s, "exécute\nread · shell · edit", 10.7, 2.2, 2.03, { h: 1.0, bold: true, fontSize: 13, fill: GREEN, color: DARK });
+// return path
+s.addShape(pres.ShapeType.line, { x: 11.7, y: 3.25, w: 0, h: 0.75, line: { color: TEAL, width: 2 } });
+s.addShape(pres.ShapeType.line, { x: 4.4, y: 4.0, w: 7.3, h: 0, line: { color: TEAL, width: 2 } });
+arrow(s, 4.4, 4.0, 4.4, 3.25);
+s.addText("résultat ajouté à l'historique (tronqué), puis on renvoie tout", { x: 5.3, y: 4.05, w: 5.6, h: 0.35, margin: 0, align: "center", fontFace: SANS, fontSize: 13, italic: true, color: MUTED });
+arrow(s, 6.65, 2.15, 6.65, 1.55);
+s.addText("non → réponse finale, la boucle s'arrête", { x: 6.85, y: 1.35, w: 5, h: 0.35, margin: 0, fontFace: SANS, fontSize: 13, bold: true, color: TEAL });
+stat(s, 0.6, 4.75, 3.6, 1.95, "~8", "appels d'outils par réponse (855 tool-calls / 101 stop, mesuré)", { size: 44 });
+textCard(s, 4.45, 4.75, 8.28, 1.95, "Ce qu'il faut savoir", [
+  "Elle s'arrête quand le modèle répond sans appel d'outil — pas de limite d'étapes par défaut.",
+  "Un modèle qui rate ses appels d'outils tourne en rond ou s'arrête trop tôt : c'est un critère de choix.",
+  { t: "La boucle n'est pas dans le modèle : c'est le harnais qui la fait tourner.", b: true },
+], { fontSize: 14 });
+src(s, "Code source OpenCode v2.0.21 (fin de boucle, champ steps optionnel) · mesuré : finish_reason des réponses dans la base locale d'OpenCode.");
+s.addNotes("La boucle (2 min). LE diagramme du talk, à dessiner du doigt. Montrer la sortie « non » : la seule condition d'arrêt est que le modèle réponde sans demander d'outil. ~8 appels d'outils pour chaque réponse finale : un agent, c'est surtout de la lecture et de l'exécution.");
+
+// Cache de prompt
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A2 });
+s.addText("Le KV cache, deuxième acte : le cache de prompt", { placeholder: "title" });
+s.addText("Le début du prompt est identique d'un tour à l'autre : llama-server garde son KV cache et ne calcule que la fin.", {
+  x: 0.6, y: 1.4, w: 12.1, h: 0.6, margin: 0, fontFace: SANS, fontSize: 16, color: INK, valign: "top",
+});
+stat(s, 0.6, 2.15, 3.85, 2.2, "94,6 %", "des tokens de prompt servis par le cache du serveur", { size: 44 });
+stat(s, 4.74, 2.15, 3.85, 2.2, "20 s → 1 s", "avant le 1er mot : 1er tour d'une session vs tours suivants", { size: 36 });
+stat(s, 8.88, 2.15, 3.85, 2.2, "4 min", "de prefill au lieu de ~81 min sans le cache", { size: 40, dark: false });
+textCard(s, 0.6, 4.6, 5.9, 1.95, "Sur le laptop CPU", [
+  { t: "~10 000 tokens à ~100 t/s de prefill = ~100 s avant le 1er mot, à chaque nouvelle session.", c: RED, b: true },
+  "D'où le serveur : le chat tient sur un laptop, l'agent veut une machine rapide.",
+]);
+textCard(s, 6.83, 4.6, 5.9, 1.95, "Ne touchez pas au début du prompt", [
+  "OpenCode ordonne ses blocs du plus stable au plus variable, exprès.",
+  { t: "Ajouter un serveur MCP en cours de session invalide tout le cache.", b: true },
+]);
+src(s, "Mesuré : /metrics du serveur (prompt_tokens_cached_total / total, prompt_seconds_total) · sessions OpenCode (TTFT) · laptop llama-bench pp512.");
+s.addNotes("Cache de prompt (3 min). C'est le KV cache de l'acte 1, réutilisé d'une requête à l'autre. Sans lui, chaque tour recalculerait tout le préfixe. Manus en fait « la métrique la plus importante d'un agent en production ». Sur CPU, le premier tour reste douloureux : c'est la vraie raison pour laquelle la démo d'agent tourne sur le serveur. Si question sur la taille du contexte : une session réelle passe de 9,6 k à 191 k tokens (une seule sortie shell : +29 k) ; OpenCode tronque les sorties (2 000 lignes / 50 Ko) et compacte à fenêtre − max(10 %, 16 k) ; sans limit.context dans la config, pas de compaction.");
+
+// Brancher OpenCode
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A2 });
+s.addText("Brancher OpenCode : une base URL", { placeholder: "title" });
+codeBlock(s, 0.6, 1.45, 7.1, 5.2, [
+  { t: "\"providers\": {", c: CODEFG },
+  { t: "  \"llama.cpp\": {", c: GREEN, b: true },
+  { t: "    \"package\": \"aisdk:@ai-sdk/openai-compatible\",", c: CODEFG },
+  { t: "    \"settings\": {", c: CODEFG },
+  { t: "      \"baseURL\": \"http://192.168.0.110:8080/v1\"", c: AMBER, b: true },
+  { t: "    },", c: CODEFG },
+  { t: "    \"models\": {", c: CODEFG },
+  { t: "      \"Qwen3.8-Flash-Next\": {", c: CODEFG },
+  { t: "        \"capabilities\": { \"tools\": true, … },", c: GREEN },
+  { t: "        \"limit\": { \"context\": 262144 }", c: GREEN },
+  { t: "      }", c: CODEFG },
+  { t: "    }", c: CODEFG },
   { t: "  }", c: CODEFG },
   { t: "}", c: CODEFG },
 ], { fontSize: 13 });
-s.addText("opencode.jsonc — extrait", { x: 0.6, y: 5.7, w: 6.6, h: 0.35, margin: 0, align: "center", fontFace: SANS, fontSize: 12, italic: true, color: MUTED });
-s.addShape(pres.ShapeType.roundRect, { x: 7.7, y: 2.1, w: 2.3, h: 1.3, rectRadius: 0.12, fill: { color: TINT } });
-s.addText("Laptop\n(démo, OpenCode)", { x: 7.7, y: 2.1, w: 2.3, h: 1.3, align: "center", valign: "middle", margin: 0, fontFace: SANS, fontSize: 13, bold: true, color: INK });
-arrow(s, 10.05, 2.75, 10.75, 2.75);
-s.addShape(pres.ShapeType.roundRect, { x: 10.8, y: 2.1, w: 2.0, h: 1.3, rectRadius: 0.12, fill: { color: DARK } });
-s.addText("Serveur CPU\n192.168.0.110", { x: 10.8, y: 2.1, w: 2.0, h: 1.3, align: "center", valign: "middle", margin: 0, fontFace: SANS, fontSize: 12, bold: true, color: WHITE });
-s.addText("API compatible OpenAI, sur le LAN", { x: 9.5, y: 3.55, w: 3.6, h: 0.4, margin: 0, align: "center", fontFace: SANS, fontSize: 12, italic: true, color: MUTED });
-card(s, 7.7, 4.35, 5.1, 2.0);
-s.addText([
-  { text: "Le cloud, remplacé par :", options: { bold: true, fontSize: 15, color: INK, breakLine: true } },
-  { text: "une adresse IP locale. N'importe quel harnais qui parle l'API OpenAI se branche ici — mêmes outils, mêmes usages, données qui ne sortent pas.", options: { color: MUTED } },
-], { x: 8.0, y: 4.6, w: 4.5, h: 1.6, margin: 0, fontFace: SANS, fontSize: 14, valign: "top", paraSpaceAfter: 8 });
-s.addNotes("Branchement (2 min). Démystifier l'intégration : pas d'SDK maison, pas de compte — une URL. C'est LE slide « je peux faire pareil ».");
+chip(s, "Laptop\nOpenCode", 8.05, 1.55, 1.9, { h: 1.1, bold: true, fontSize: 14 });
+arrow(s, 10.0, 2.1, 10.75, 2.1);
+chip(s, "llama-server\n192.168.0.110", 10.8, 1.55, 1.93, { h: 1.1, bold: true, fontSize: 13, fill: DARK, color: WHITE });
+s.addText("API compatible OpenAI, sur le LAN", { x: 8.05, y: 2.75, w: 4.68, h: 0.35, margin: 0, align: "center", fontFace: SANS, fontSize: 13, italic: true, color: MUTED });
+textCard(s, 8.05, 3.3, 4.68, 3.35, "Trois points d'attention", [
+  "capabilities.tools : sinon le modèle n'a pas d'outils.",
+  "limit.context : la vraie fenêtre, pour la compaction.",
+  "Test de vie : curl …/v1/models",
+  { t: "Le modèle et le harnais ne se connaissent que par cette URL.", b: true },
+], { fontSize: 14 });
+src(s, "~/.config/opencode/opencode.jsonc (extrait, syntaxe OpenCode v2 : providers / package / settings — la doc v1 dit provider / npm / options).");
+s.addNotes("Branchement (2 min). La config réelle, pas un slide marketing : ~30 lignes au total avec les variantes. Attention à la version : OpenCode v2 a changé les clés (providers/package/settings) et ne lit plus CLAUDE.md, seulement AGENTS.md. N'importe quel harnais qui parle l'API OpenAI se branche de la même façon.");
 
-// 20 — Live 2
-s = pres.addSlide({ masterName: "MASTER_LIVE", sectionTitle: "Acte 2 — Agir" });
+// Live 2
+s = pres.addSlide({ masterName: "MASTER_LIVE", sectionTitle: S_A2 });
 liveBadge(s);
-s.addText("OpenCode + modèle local : 3 tests rouges", { placeholder: "title" });
-step(s, 1, 0.9, 3.1, 5.6, "Le constat", "python3 -m unittest dans demo/ : 9 tests, 3 échecs. Un bug de facturation. Je ne dis pas où.", true);
-step(s, 2, 0.9, 4.55, 5.6, "L'agent travaille", "« Les tests sont rouges, rends-les verts. » — lire, diagnostiquer, éditer, revérifier. Commenter les tool calls en direct.", true);
-step(s, 3, 6.9, 3.1, 5.5, "git diff", "Une valeur a changé : le palier de remise à 9 % au lieu de 10 %... d'après le code. La docstring, elle, disait la vérité.", true);
-card(s, 6.9, 4.75, 5.5, 1.6, CODEBG);
+s.addText("OpenCode corrige un bug, 100 % local", { placeholder: "title" });
+step(s, 1, 0.9, 2.95, 5.6, "Le constat", "python3 -m unittest dans demo/ : 9 tests, 3 rouges. Un bug de facturation. Je ne dis pas où.", true);
+step(s, 2, 0.9, 4.15, 5.6, "L'agent travaille", "read → shell → read → edit → shell. Et le log du serveur montre le cache au travail.", true);
+step(s, 3, 0.9, 5.35, 5.6, "git diff", "Une seule valeur change. « Il n'a pas deviné : il a mesuré. »", true);
+codeBlock(s, 6.9, 2.95, 5.6, 2.1, [
+  { t: "$ curl -s 192.168.0.110:8080/metrics", c: GREEN },
+  { t: "prompt_tokens_total          239 162", c: CODEFG },
+  { t: "prompt_tokens_cached_total 4 212 240", c: AMBER, b: true },
+  { t: "predicted_tokens_seconds        35.9", c: CODEFG },
+], { fontSize: 13 });
 s.addText([
-  { text: "L'agent qui fait ça tourne sur le serveur local,", options: { color: GREEN, breakLine: true } },
-  { text: "à 35 tokens/s. La session qui a PRÉPARÉ cette présentation aussi.", options: { color: WHITE } },
-], { x: 7.2, y: 4.95, w: 4.95, h: 1.25, margin: 0, fontFace: SANS, fontSize: 15, bold: true, valign: "top" });
+  { text: "4,4 M tokens de prompt servis par ce serveur pendant la préparation du talk, ", options: { color: WHITE } },
+  { text: "94,6 % depuis le cache. Rien n'a quitté le LAN.", options: { color: GREEN, bold: true } },
+], { x: 6.9, y: 5.2, w: 5.6, h: 1.1, margin: 0, fontFace: SANS, fontSize: 15, valign: "top" });
 actDots(s, 1, 6.6);
-s.addNotes("LIVE 2 (10-12 min). Le moment clé. Script détaillé dans SCENARIOS.md. Ne PAS révéler le bug avant le git diff final. Punchline méta : cette présentation elle-même a été écrite par un agent sur ce modèle local.");
+s.addNotes("LIVE 2 (10 min). Script : SCENARIOS.md. Ne PAS révéler le bug avant le git diff. Pendant que l'agent travaille, montrer le log serveur : prompt eval time petit (seul le suffixe est recalculé) grâce au cache. Punchline : curl /metrics — chiffres du jour à relever avant la session (compteurs cumulés depuis le démarrage du serveur).");
 
-/* =====================================================================
-   SECTION — ACTE 3 : ÉTENDRE
-===================================================================== */
-pres.addSection({ title: "Acte 3 — Étendre" });
+// Étendre
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A2 });
+s.addText("Étendre l'agent sans coder", { placeholder: "title" });
+const ext = [
+  ["AGENTS.md", "Les règles du projet", "Un fichier markdown à la racine, injecté dans chaque requête. Court et précis : chaque ligne est payée à chaque tour."],
+  ["SKILL.md", "Savoir-faire à la demande", "Divulgation progressive : nom + description au départ, le corps quand la tâche s'y prête, les fichiers annexes ensuite."],
+  ["MCP", "Des outils externes", "Un protocole client/serveur : tickets, base de données, navigateur… OpenCode v2 les expose via un catalogue texte + un outil execute."],
+];
+ext.forEach(([k, t, d], i) => {
+  const x = 0.6 + i * 4.18;
+  card(s, x, 1.5, 3.85, 3.9);
+  chip(s, k, x + 0.3, 1.8, 3.25, { h: 0.6, mono: true, bold: true, fontSize: 18, fill: DARK, color: GREEN });
+  s.addText(t, { x: x + 0.3, y: 2.6, w: 3.25, h: 0.5, margin: 0, fontFace: SERIF, fontSize: 19, bold: true, color: INK });
+  s.addText(d, { x: x + 0.3, y: 3.15, w: 3.25, h: 2.1, margin: 0, fontFace: SANS, fontSize: 14, color: MUTED, valign: "top" });
+});
+strip(s, 5.7, [
+  { text: "Chaque extension a un coût en contexte : ", options: { color: WHITE } },
+  { text: "même « progressives », 49 descriptions de skills pèsent ~3 800 tokens à chaque session.", options: { bold: true, color: GREEN } },
+], { h: 0.9 });
+src(s, "Sources : agents.md · agentskills.io · spec MCP (révision 2026-07-28) · docs et code OpenCode v2.0.21 (Code Mode, skill-guidance).");
+s.addNotes("Extensions (2 min). Trois niveaux : des règles toujours présentes (AGENTS.md), du savoir-faire chargé à la demande (skills), des outils externes (MCP). Ironie mesurée sur ce repo : la liste des skills est le premier poste du prompt de base. Annoncer le live 3 : on écrit une skill en direct.");
 
-// 21 — Diviseur acte 3
-s = pres.addSlide({ masterName: "MASTER_DIVISEUR", sectionTitle: "Acte 3 — Étendre" });
-s.addText("ACTE 3 · ÉTENDRE", { x: 0.9, y: 2.15, w: 10, h: 0.4, margin: 0, fontFace: SANS, fontSize: 15, bold: true, color: GREEN, charSpacing: 3 });
-s.addText("Skills, MCP, paysage", { placeholder: "title" });
-actDots(s, 2, 4.7);
-s.addNotes("Transition : l'agent sait lire, éditer, exécuter. Comment lui apprendre NOS façons de faire, sans re-entraîner quoi que ce soit ?");
-
-// 22 — Skills
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 3 — Étendre" });
-s.addText("Une skill = un fichier markdown", { placeholder: "title" });
-codeBlock(s, 0.6, 1.6, 6.4, 4.6, [
-  { t: "---", c: "A9B7C6" },
+// Live 3
+s = pres.addSlide({ masterName: "MASTER_LIVE", sectionTitle: S_A2 });
+liveBadge(s);
+s.addText("Écrire une skill en direct", { placeholder: "title" });
+step(s, 1, 0.9, 2.95, 5.6, "Un dossier, un fichier", ".opencode/skills/explain-file/SKILL.md, frontmatter name + description.", true);
+step(s, 2, 0.9, 4.15, 5.6, "Quatre consignes", "Rôle · Structure · Subtilités · Limites. Quinze lignes en tout.", true);
+step(s, 3, 0.9, 5.35, 5.6, "L'invocation", "« explique demo/pricing.py » : l'agent voit la skill, la charge, l'applique.", true);
+codeBlock(s, 6.9, 2.95, 5.6, 3.2, [
+  { t: "---", c: CODEDIM },
   { t: "name: explain-file", c: GREEN, b: true },
   { t: "description: Explique un fichier", c: CODEFG },
   { t: "  de code (rôle, structure,", c: CODEFG },
   { t: "  subtilités, limites)", c: CODEFG },
-  { t: "---", c: "A9B7C6" },
+  { t: "---", c: CODEDIM },
   { t: "1. Lis le fichier en entier.", c: CODEFG },
   { t: "2. Rends : Rôle, Structure,", c: CODEFG },
   { t: "   Subtilités, Limites.", c: CODEFG },
-  { t: "3. Moins de 20 lignes.", c: CODEFG },
 ], { fontSize: 13 });
-s.addText(".opencode/skills/explain-file/SKILL.md", { x: 0.6, y: 6.3, w: 6.4, h: 0.35, margin: 0, align: "center", fontFace: SANS, fontSize: 12, italic: true, color: MUTED });
-card(s, 7.5, 1.6, 5.25, 4.9);
-s.addText([
-  { text: "Comment ça marche", options: { bold: true, fontSize: 16, color: INK, breakLine: true } },
-  { text: "· Le harnais liste name + description à l'agent — c'est tout ce qui coûte du contexte au repos.", options: { color: MUTED, breakLine: true } },
-  { text: "· Quand la situation colle, l'agent charge le corps du fichier et l'applique.", options: { color: MUTED, breakLine: true } },
-  { text: "· Progressive disclosure : la connaissance est versée à la demande, pas en permanence.", options: { color: MUTED, breakLine: true } },
-  { text: "· Rien à re-entraîner, rien à déployer. Un fichier. Git-able, partageable, relisible dans dix ans.", options: { bold: true, color: TEAL } },
-], { x: 7.82, y: 1.9, w: 4.6, h: 4.3, margin: 0, fontFace: SANS, fontSize: 14.5, valign: "top", paraSpaceAfter: 9 });
-s.addNotes("Skills (2-3 min). Montrer le VRAI fichier de la démo. Le point qui claque pour des devs : c'est du markdown versionné, pas de la config propriétaire.");
-
-// 23 — Live 3
-s = pres.addSlide({ masterName: "MASTER_LIVE", sectionTitle: "Acte 3 — Étendre" });
-liveBadge(s);
-s.addText("Écrire une skill en direct", { placeholder: "title" });
-step(s, 1, 0.9, 3.1, 5.6, "mkdir + SKILL.md", "Un dossier, un fichier, le frontmatter (name + description). On le tape devant vous.", true);
-step(s, 2, 0.9, 4.55, 5.6, "Quatre consignes", "Rôle · Structure · Subtilités · Limites. La skill entière fait quinze lignes.", true);
-step(s, 3, 6.9, 3.1, 5.5, "L'invocation", "« explique demo/pricing.py » — l'agent voit la nouvelle skill, la charge, l'applique.", true);
-s.addShape(pres.ShapeType.roundRect, { x: 6.9, y: 4.75, w: 5.5, h: 1.2, rectRadius: 0.1, fill: { color: CODEBG } });
-s.addText([
-  { text: "> explique demo/pricing.py", options: { color: GREEN, breakLine: true } },
-  { text: "skill: explain-file chargée ✓", options: { color: CODEFG } },
-], { x: 7.15, y: 4.95, w: 5.0, h: 0.85, margin: 0, fontFace: MONO, fontSize: 13, valign: "top" });
-actDots(s, 2, 6.6);
-s.addNotes("LIVE 3 (5 min). Frappe en direct — si ça dérape, git checkout de la version committée (déjà faite, cf. repo). Vérifié : OpenCode détecte la skill sans redémarrage.");
-
-// 24 — MCP
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 3 — Étendre" });
-s.addText("MCP : le port USB des outils", { placeholder: "title" });
-s.addShape(pres.ShapeType.roundRect, { x: 5.15, y: 3.0, w: 3.0, h: 1.2, rectRadius: 0.15, fill: { color: DARK } });
-s.addText("Harnais\n(OpenCode…)", { x: 5.15, y: 3.0, w: 3.0, h: 1.2, align: "center", valign: "middle", margin: 0, fontFace: SANS, fontSize: 15, bold: true, color: WHITE });
-const mcpNodes = [
-  ["Repos Git", 1.0, 1.7], ["Tickets / tracker", 5.35, 1.55], ["Bases de données", 9.9, 1.7],
-  ["Navigateur", 1.0, 4.9], ["Fichiers d'entreprise", 5.15, 5.15], ["API métier", 9.9, 4.9],
-];
-mcpNodes.forEach(([lbl, x, y]) => {
-  chip(s, lbl, x, y, 2.5, { h: 0.62, bold: true, fontSize: 13, line: TEAL, lineW: 1, fill: WHITE });
-  const cx = x + 1.25, cy = y + 0.31;
-  arrow(s, 6.65, 3.6, cx, cy, { width: 1.5, color: GREEN });
-});
-s.addText("Un serveur MCP expose des outils ; tous les harnais qui parlent MCP les voient. Standard ouvert, indépendant du vendeur.", {
-  x: 0.6, y: 6.0, w: 12.2, h: 0.8, margin: 0, align: "center", fontFace: SANS, fontSize: 15, color: MUTED, valign: "top",
-});
-s.addNotes("MCP (2 min, survol). L'analogie USB suffit pour une session d'une heure. Message : outiller un agent sur VOS systèmes est un problème résolu, pas une usine à gaz à réinventer.");
-
-// 25 — Paysage harnais
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 3 — Étendre" });
-s.addText("Le paysage des harnais (octobre 2026)", { placeholder: "title" });
-const rows = [
-  [{ text: "Outil", options: { bold: true, color: WHITE, fill: { color: DARK } } }, { text: "Interface", options: { bold: true, color: WHITE, fill: { color: DARK } } }, { text: "Code", options: { bold: true, color: WHITE, fill: { color: DARK } } }, { text: "Modèle local", options: { bold: true, color: WHITE, fill: { color: DARK } } }],
-  [{ text: "OpenCode", options: { bold: true } }, "terminal + IDE", "open source", { text: "oui (comme ici)", options: { bold: true, color: GREEN } }],
-  [{ text: "Claude Code", options: { bold: true } }, "terminal", "propriétaire", "oui (serveur compatible)"],
-  [{ text: "Codex CLI", options: { bold: true } }, "terminal", "open source", "oui (provider custom)"],
-  [{ text: "Gemini CLI", options: { bold: true } }, "terminal", "open source", { text: "partiel", options: { color: AMBER, bold: true } }],
-  [{ text: "Cursor", options: { bold: true } }, "IDE", "propriétaire", { text: "non (cloud d'abord)", options: { color: "C0392B", bold: true } }],
-  [{ text: "Cline", options: { bold: true } }, "extension VS Code", "open source", "oui"],
-];
-s.addTable(rows, {
-  x: 0.6, y: 1.7, w: 12.1, colW: [2.7, 3.1, 2.7, 3.6],
-  fontFace: SANS, fontSize: 14, color: INK, valign: "middle",
-  border: { type: "solid", color: "D3DCE6", pt: 0.75 },
-  fill: { color: WHITE }, rowH: 0.55,
-  autoPage: false,
-});
-s.addText("Terminal ↔ IDE, vertical ↔ éditeur étendu : la vraie ligne de partage est la dernière colonne.", {
-  x: 0.6, y: 6.15, w: 12.2, h: 0.5, margin: 0, align: "center", fontFace: SANS, fontSize: 15, italic: true, color: TEAL,
-});
-s.addNotes("Paysage (2 min). Ne pas faire la guerre des cloches : le critère qui compte pour CE public est la colonne locale. Statuts à revérifier la veille — l'écosystème bouge vite.");
-
-// 26 — Frameworks & standards
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Acte 3 — Étendre" });
-s.addText("Frameworks & standards — sans obligation", { placeholder: "title" });
-card(s, 0.6, 1.6, 6.0, 3.9);
-s.addText([
-  { text: "Frameworks d'agents", options: { bold: true, fontSize: 17, color: TEAL, breakLine: true } },
-  { text: "LangChain / LangGraph · CrewAI · AutoGen · PydanticAI", options: { bold: true, color: INK, breakLine: true } },
-  { text: "Pour CONSTRUIRE votre propre agent dans du code : workflows multi-agents, routage, états durables. Pertinent quand vous vendez de l'agentique — pas pour coder au quotidien.", options: { color: MUTED } },
-], { x: 0.95, y: 1.9, w: 5.4, h: 3.3, margin: 0, fontFace: SANS, fontSize: 14.5, valign: "top", paraSpaceAfter: 9 });
-card(s, 6.85, 1.6, 6.0, 3.9);
-s.addText([
-  { text: "Standards ouverts", options: { bold: true, fontSize: 17, color: TEAL, breakLine: true } },
-  { text: "MCP · AGENTS.md · format Agent Skills", options: { bold: true, color: INK, breakLine: true } },
-  { text: "Des conventions, pas des bibliothèques : les outils se conforment, vous changez de harnais sans rien perdre. Ce sont eux qui durent.", options: { color: MUTED } },
-], { x: 7.2, y: 1.9, w: 5.4, h: 3.3, margin: 0, fontFace: SANS, fontSize: 14.5, valign: "top", paraSpaceAfter: 9 });
-s.addShape(pres.ShapeType.roundRect, { x: 0.6, y: 5.8, w: 12.25, h: 1.0, rectRadius: 0.1, fill: { color: DARK } });
-s.addText([
-  { text: "Pour démarrer, rien de tout ça n'est requis : ", options: { color: WHITE } },
-  { text: "un harnais + un modèle local. Le reste est optionnel.", options: { bold: true, color: GREEN } },
-], { x: 0.95, y: 5.8, w: 11.6, h: 1.0, margin: 0, valign: "middle", fontFace: SANS, fontSize: 17 });
-s.addNotes("Frameworks (2 min). Dégonfler l'anxiété technique : on n'a PAS besoin de LangChain pour coder avec un agent. Distinguer construire un produit agentique vs développer avec un agent.");
+actDots(s, 1, 6.6);
+s.addNotes("LIVE 3 (5 min). Rien à redéployer : c'était un fichier. La description est ce que l'agent voit au départ ; le corps n'est chargé qu'à l'usage. Filet : git checkout de la version committée. ✂ Coupable en version 60 min (montrer le fichier committé à la place).");
 
 /* =====================================================================
-   SECTION — CLÔTURE
+   ACTE 3 — EXPLORER (~12 min)
 ===================================================================== */
-pres.addSection({ title: "Clôture" });
+pres.addSection({ title: S_A3 });
 
-// 27 — Trois modèles mentaux
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Clôture" });
-s.addText("Trois modèles mentaux à emporter", { placeholder: "title" });
-const mm = [
-  ["1", "Machine à prédire", "Le token suivant, encore et encore. L'hallucination est structurelle : on outille la vérification, on ne la demande pas au modèle."],
-  ["2", "La boucle", "Un agent = LLM + outils + critère mesurable. Le LLM ne change rien ; c'est le montage qui développe."],
-  ["3", "Contexte rare", "Chaque token dans la fenêtre est payé à chaque tour. Bien coder avec un agent, c'est gérer ce budget."],
-];
-mm.forEach(([n, t, d], i) => {
-  const x = 0.6 + i * 4.18;
-  card(s, x, 1.6, 3.85, 4.4);
-  s.addText(n, { x: x + 0.3, y: 1.85, w: 1.0, h: 0.9, margin: 0, fontFace: SERIF, fontSize: 48, bold: true, color: GREEN });
-  s.addText(t, { x: x + 0.3, y: 2.85, w: 3.25, h: 0.5, margin: 0, fontFace: SERIF, fontSize: 20, bold: true, color: INK });
-  s.addText(d, { x: x + 0.3, y: 3.45, w: 3.25, h: 2.3, margin: 0, fontFace: SANS, fontSize: 14, color: MUTED, valign: "top" });
-});
-s.addNotes("Synthèse (2 min). Une minute par modèle. Si le public ne retient que ces trois phrases, le talk a réussi.");
+divider(S_A3, "ACTE 3 · EXPLORER", "Le paysage, automne 2026", 2,
+  "Transition : « Vous avez vu une pile complète : un modèle, un moteur, un harnais. Où en sont les modèles, et sur quoi les faire tourner ? » Tous les chiffres de cet acte sont datés et sourcés dans docs/research/acte3-paysage.md — à revérifier la veille.");
 
-// 28 — RIEN
-s = pres.addSlide({ masterName: "MASTER_TITRE", sectionTitle: "Clôture" });
+// Modèles
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A3 });
+s.addText("Open-weights : l'écart s'est fermé… sur les tâches courtes", { placeholder: "title" });
+s.addChart(pres.ChartType.bar, [
+  { name: "Meilleur modèle fermé", labels: ["SWE-bench Verified", "Terminal-Bench 4.0", "Indice Artificial Analysis"], values: [97.0, 65, 58] },
+  { name: "Meilleur open-weights", labels: ["SWE-bench Verified", "Terminal-Bench 4.0", "Indice Artificial Analysis"], values: [96.4, 39, 46] },
+], chartOpts({
+  x: 0.6, y: 1.45, w: 7.0, h: 4.3, barDir: "col",
+  chartColors: [DARK, GREEN], showLegend: true, legendPos: "b", legendFontSize: 13, legendColor: INK, legendFontFace: "+mn-lt",
+  dataLabelFormatCode: "0.#", valAxisHidden: true, valGridLine: { style: "none" }, valAxisMaxVal: 110,
+}));
+textCard(s, 7.9, 1.45, 4.83, 4.3, "Ce qu'il faut retenir", [
+  "MoE partout : 1,5 à 6 B actifs pour 8 à 180 B et plus au total.",
+  "Attention hybride, contexte de 256 k à 1 M, modèles livrés quantifiés.",
+  { t: "Les open-weights de tête pèsent 300 B à 2,8 T : pas sur un laptop.", b: true },
+  "Le modèle de la démo revendique 62,5 sur SWE-bench Pro : revendication de l'éditeur.",
+], { fontSize: 14 });
+strip(s, 5.95, [
+  { text: "SWE-bench Verified est saturé ; ", options: { color: WHITE } },
+  { text: "sur les tâches longues en terminal, l'écart reste réel.", options: { bold: true, color: GREEN } },
+], { h: 0.8 });
+src(s, "Sources indépendantes, consultées le 05/10/2026 : swebench.com, Vals.ai (Terminal-Bench 4.0), Artificial Analysis · model card Qwen3.8-Flash-Next (revendication).");
+s.addNotes("Modèles (2 min). Message honnête : sur les benchmarks courts, l'écart a disparu ; sur les tâches agentiques longues, les meilleurs modèles fermés gardent une avance nette. Et les open-weights qui s'en approchent sont énormes. Les chiffres bougent chaque mois : à revérifier la veille.");
+
+// Matériel
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A3 });
+s.addText("Matériel : lisez la bande passante, pas les TOPS", { placeholder: "title" });
+s.addChart(pres.ChartType.bar, [
+  { name: "Bande passante mémoire (Go/s)", labels: ["Laptop du talk (mesuré, effectif)", "Strix Halo · 128 Go (mesuré)", "DGX Spark · 128 Go", "Mac M5 Max · 128 Go", "Mac M5 Ultra · 512 Go", "RTX 5090 · 32 Go"], values: [38, 215, 273, 614, 1200, 1800] },
+], chartOpts({
+  x: 0.6, y: 1.45, w: 7.4, h: 4.3, barDir: "bar",
+  chartColors: [RED, MUTED, MUTED, TEAL, TEAL, DARK], dataLabelFormatCode: '0" Go/s"', dataLabelFontSize: 13,
+  catAxisLabelFontSize: 13, valAxisHidden: true, valGridLine: { style: "none" }, valAxisMaxVal: 2200,
+  catAxisOrientation: "maxMin",
+}));
+textCard(s, 8.3, 1.45, 4.43, 4.3, "Lire le graphique", [
+  "Rappel acte 1 : tok/s ≈ bande passante ÷ poids actifs.",
+  { t: "Repère officiel llama.cpp : gpt-oss-120b sur DGX Spark → 59 t/s à vide, 43 t/s à 32 k de contexte.", c: INK },
+  "La RTX 5090 est la plus rapide, mais 32 Go seulement : les gros MoE n'y tiennent pas.",
+  { t: "La DRAM est chère en 2026 (TrendForce : +10 à 18 % par trimestre).", b: true },
+], { fontSize: 14 });
+strip(s, 5.95, [
+  { text: "Pour un agent local : ", options: { color: WHITE } },
+  { text: "beaucoup de mémoire (≥ 128 Go) et de la bande passante, plutôt que de la puissance de calcul.", options: { bold: true, color: GREEN } },
+], { h: 0.8 });
+src(s, "Sources : Apple Newsroom (08/2026), NVIDIA, llama.cpp benches/dgx-spark, Soothill (Strix Halo, 08/2026), TrendForce (09/2026) · laptop : mesure du 05/10/2026.");
+s.addNotes("Matériel (2 min). Le critère n°1 est la bande passante mémoire, et la quantité de mémoire qu'elle sert. Les chiffres constructeur sont théoriques ; le laptop est une mesure effective (le théorique LPDDR5 est autour de 80 Go/s). Prix volatils en 2026 : les donner oralement, à revérifier.");
+
+/* =====================================================================
+   CLÔTURE (~5 min + Q&A)
+===================================================================== */
+pres.addSection({ title: S_CLO });
+
+// RIEN
+s = pres.addSlide({ masterName: "MASTER_TITRE", sectionTitle: S_CLO });
 s.addText("Bilan confidentiel — l'inventaire de la journée :", {
   x: 0.9, y: 1.75, w: 11.5, h: 0.6, margin: 0, fontFace: SANS, fontSize: 22, color: ON_DARK_MUT,
 });
 s.addText("RIEN.", {
   x: 0.9, y: 2.3, w: 11.5, h: 2.3, margin: 0, fontFace: SERIF, fontSize: 120, bold: true, color: GREEN,
 });
-s.addText("Vos prompts, le code de la démo, les tests, la skill, les correctifs de l'agent :\ntout est resté sur les machines de cette salle.", {
+s.addText("Les prompts, le code de la démo, les tests, la skill, les correctifs de l'agent :\ntout est resté sur les machines de cette salle.", {
   x: 0.9, y: 5.0, w: 11.5, h: 1.0, margin: 0, fontFace: SANS, fontSize: 20, color: WHITE,
 });
-s.addNotes("Punchline (1-2 min). Laisser le mot « RIEN » seul à l'écran. Rappel discret du hook d'ouverture : « ce que vous collez dans un chat cloud, aujourd'hui, n'est jamais sorti d'ici ».");
+s.addNotes("Punchline (1 min). Laisser « RIEN » seul à l'écran. Retour au hook : « ce que vous collez dans un chat cloud n'est, aujourd'hui, jamais sorti d'ici ».");
 
-// 29 — Chez vous ce soir
-s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: "Clôture" });
+// Chez vous ce soir
+s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_CLO });
 s.addText("Chez vous ce soir — trois commandes", { placeholder: "title" });
-codeBlock(s, 0.6, 1.6, 7.6, 3.6, [
+codeBlock(s, 0.6, 1.5, 7.6, 2.3, [
   { t: "$ git clone <le repo de cette présentation>", c: GREEN },
   { t: "$ docker compose build", c: CODEFG },
   { t: "$ docker compose run --rm llama bash", c: CODEFG },
-  { t: "  # hf download <modèle> --local-dir /models/<modèle>", c: "A9B7C6" },
-  { t: "  # llama-cli -m /models/<modèle>/<fichier>.gguf", c: "A9B7C6" },
+  { t: "  # hf download <modèle> --local-dir /models/<modèle>", c: CODEDIM },
+  { t: "  # llama-server -m /models/<modèle>/<fichier>.gguf", c: CODEDIM },
 ], { fontSize: 14 });
-card(s, 0.6, 5.5, 7.6, 1.3);
-s.addText([
-  { text: "Le repo contient tout : ", options: { bold: true, color: INK } },
-  { text: "conteneur llama.cpp, la démo avec son bug re-verdissable, la skill explain-file, le plan et les scripts des lives.", options: { color: MUTED } },
-], { x: 0.95, y: 5.65, w: 7.0, h: 1.0, margin: 0, valign: "top", fontFace: SANS, fontSize: 14.5 });
-s.addShape(pres.ShapeType.roundRect, { x: 8.9, y: 1.7, w: 3.6, h: 3.6, rectRadius: 0.1, fill: { color: WHITE }, line: { color: INK, width: 1.5, dashType: "dash" } });
+textCard(s, 0.6, 4.05, 7.6, 1.4, null, [
+  { t: "Le repo contient tout : conteneur llama.cpp, démo avec son bug, skill explain-file, config OpenCode, notes de recherche et mesures.", c: INK },
+], { fontSize: 15 });
+s.addShape(pres.ShapeType.roundRect, { x: 8.9, y: 1.6, w: 3.6, h: 3.6, rectRadius: 0.1, fill: { color: WHITE }, line: { color: INK, width: 1.5, dashType: "dash" } });
 s.addText("QR → repo public\ngithub.com/<vous>/llama\n\n(à générer avant le jour J)", {
-  x: 9.1, y: 1.95, w: 3.2, h: 3.1, margin: 0, align: "center", valign: "middle", fontFace: SANS, fontSize: 14, color: MUTED,
+  x: 9.1, y: 1.85, w: 3.2, h: 3.1, margin: 0, align: "center", valign: "middle", fontFace: SANS, fontSize: 14, color: MUTED,
 });
-s.addNotes("Take-away (1-2 min). Le QR mène au repo public — LE cadeau. Insister : la démo est rejouable chez soi, bug compris.");
+s.addNotes("Take-away (1 min). Le QR mène au repo public. La démo est rejouable chez soi, bug compris, et toutes les mesures du talk sont dans docs/research.");
 
-// 30 — Q&A
-s = pres.addSlide({ masterName: "MASTER_TITRE", sectionTitle: "Clôture" });
+// Merci
+s = pres.addSlide({ masterName: "MASTER_TITRE", sectionTitle: S_CLO });
 s.addText("Merci.", { placeholder: "title" });
 s.addText("Place aux questions — et si le serveur tient, à une démo improvisée.", {
   x: 0.9, y: 4.3, w: 11.5, h: 0.6, margin: 0, fontFace: SANS, fontSize: 20, color: ON_DARK_MUT,
@@ -792,6 +931,6 @@ s.addText("Place aux questions — et si le serveur tient, à une démo improvis
 s.addText("repo : github.com/<vous>/llama · licence MIT · tout est rejouable", {
   x: 0.9, y: 6.6, w: 11.5, h: 0.4, margin: 0, fontFace: SANS, fontSize: 13, color: ON_DARK_MUT,
 });
-s.addNotes("Q&A. Rester disponible pour prolonger les lives à la demande (« et si on essayait avec VOTRE projet ? »).");
+s.addNotes("Q&A. Proposer de prolonger les lives à la demande (« et si on essayait sur VOTRE projet ? »).");
 
 pres.writeFile({ fileName: "llm-agentique-local.pptx" }).then(() => console.log("OK écrit"));
