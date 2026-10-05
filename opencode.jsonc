@@ -1,0 +1,33 @@
+// Brancher OpenCode (v2) sur un llama-server local — toute la « plomberie ».
+//
+// 1. Lancer le serveur avec un nom de modèle stable et un contexte suffisant
+//    (OpenCode envoie ~10 000 tokens dès le premier tour) :
+//      llama-server -m /models/<modele>/<fichier>.gguf -c 32768 -np 1 --alias local-model
+// 2. Indiquer où il écoute :
+//      export LLAMA_BASE_URL=http://127.0.0.1:8080/v1
+// 3. opencode, puis choisir le modèle llama-local/local-model dans l'interface
+//    (non interactif : opencode run -m llama-local/local-model "…")
+{
+  "$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "llama-local": {
+      "name": "llama-server (local)",
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "{env:LLAMA_BASE_URL}",
+        // llama-server n'exige pas de clé (sauf --api-key) ; le SDK en veut une.
+        "apiKey": "local"
+      },
+      "models": {
+        // La clé doit être l'id renvoyé par GET $LLAMA_BASE_URL/models (--alias).
+        "local-model": {
+          "name": "Modèle local (llama-server)",
+          // Obligatoire : sans input/output, OpenCode répond « Model unavailable ».
+          "capabilities": { "tools": true, "input": ["text"], "output": ["text"] },
+          // Garder ≤ au -c du serveur, sinon pas de compaction automatique fiable.
+          "limit": { "context": 32768 }
+        }
+      }
+    }
+  }
+}

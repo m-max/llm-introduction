@@ -17,17 +17,18 @@ RUN apt-get update \
         ca-certificates \
         cmake \
         git \
-        libcurl4-openssl-dev \
+        libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone --depth 1 --recurse-submodules --branch "${LLAMA_VERSION}" \
         https://github.com/ggml-org/llama.cpp.git /src/llama.cpp
 
 WORKDIR /src/llama.cpp
+# Backend CPU : activé par défaut. LLAMA_OPENSSL (défaut ON, exige libssl-dev)
+# fournit le HTTPS dont `-hf` a besoin pour télécharger depuis Hugging Face.
 RUN cmake -B build \
         -DCMAKE_BUILD_TYPE=Release \
-        -DGGML_CPU=ON \
-        -DLLAMA_CURL=ON \
+        -DLLAMA_OPENSSL=ON \
     && cmake --build build --config Release -j "$(nproc)" \
         --target llama-server llama-cli llama-bench
 
@@ -45,18 +46,19 @@ RUN apt-get update \
         bash \
         ca-certificates \
         less \
-        libcurl4t64 \
+        libssl3t64 \
         libgomp1 \
         procps \
         python3 \
         python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-# CLI Hugging Face (`hf`) + accélérateur de téléchargement, dans un venv
-# dédié (Ubuntu 24.04 interdit les pip « système », PEP 668).
+# CLI Hugging Face (`hf`), dans un venv dédié (Ubuntu 24.04 interdit les pip
+# « système », PEP 668). Les transferts passent par hf-xet, installé avec
+# huggingface_hub (hf_transfer est déprécié).
 RUN python3 -m venv /opt/hf-venv \
     && /opt/hf-venv/bin/pip install --no-cache-dir --upgrade pip \
-    && /opt/hf-venv/bin/pip install --no-cache-dir huggingface_hub hf_transfer \
+    && /opt/hf-venv/bin/pip install --no-cache-dir huggingface_hub \
     && /opt/hf-venv/bin/hf version
 ENV PATH="/opt/hf-venv/bin:${PATH}"
 

@@ -455,15 +455,28 @@ sourcées dans la note acte 3. **À revérifier la veille.**
      `llama_kv_cache` n'apparaît pas ;
    - live 2 : outils renommés (`shell`), log serveur et `/metrics` ;
    - live 3 : déplacé à l'acte 2.
-3. **Repo** :
-   - retirer `hf_transfer` (`Dockerfile` l. 59) et `HF_HUB_ENABLE_HF_TRANSFER`
-     (`.env.example`), dépréciés : Xet est automatique ;
-   - ajouter un `opencode.jsonc` v2 au repo, avec `baseURL` en `{env:…}` ;
-   - sourcer ou simplifier les flags CMake `-DLLAMA_CURL=ON -DGGML_CPU=ON` ;
-   - corriger le README (l. 86-94) : il affirme que l'auto-détection prend
-     « 14 cœurs physiques ». Le code exclut les E-cores, donc l'auto prend 6.
-     Mesuré : 6 threads décodent plus vite que 14. Ajouter `-t 6` au
-     benchmark `-t 8,14,20`.
-4. **`execution-llm-local.md`** : intégrer les erreurs E1–E11 relevées au §0
-   de la note acte 1 (ratio prefill/decode, mmap, `--fit`, `--no-mmap`,
-   formules mémoire).
+3. ✅ **Repo** (05/10/2026) :
+   - `Dockerfile` : `hf_transfer` retiré, car déprécié et remplacé par hf-xet,
+     installé avec `huggingface_hub`. `.env.example` propose
+     `HF_XET_HIGH_PERFORMANCE`.
+   - **Bug corrigé** : `-hf` était cassé (`HTTPS is not supported`).
+     `-DLLAMA_CURL` n'existe plus en v0.5.0 : le HTTPS passe par OpenSSL. Le
+     build utilise maintenant `libssl-dev` + `-DLLAMA_OPENSSL=ON`, et l'image
+     d'exécution `libssl3t64`. `-DGGML_CPU=ON` est retiré (c'est le défaut).
+     Vérifié : `llama-cli -hf unsloth/Qwen3-0.6B-GGUF:Q4_K_M` télécharge et
+     répond.
+   - `opencode.jsonc` ajouté à la racine (syntaxe v2) :
+     - provider `llama-local`, distinct du `llama.cpp` global pour ne pas
+       l'écraser ;
+     - `baseURL` en `{env:LLAMA_BASE_URL}`, vérifié contre le serveur ;
+     - `capabilities.input/output` obligatoires, sinon « Model unavailable ».
+   - README :
+     - la commande 3 du démarrage rapide était cassée (`\` suivi d'un
+       commentaire) ;
+     - l'auto-détection des threads est corrigée (6 P-cores, mesures à
+       l'appui), et `-t 6` ajouté au benchmark ;
+     - ajouts : le piège des 4 slots (« toujours fixer `-c` »), le raccourci
+       `-hf`, et une section « 5. Brancher un agent (OpenCode) ».
+4. ✅ **`execution-llm-local.md`** : un encadré d'errata en tête renvoie aux
+   corrections E1–E11 (§0 de la note acte 1) et à la syntaxe v2 (§0 de la
+   note acte 2). Le corps de la note est conservé tel quel.
