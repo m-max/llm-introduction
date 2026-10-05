@@ -15,13 +15,13 @@ modifie le script et on régénère.
 | `PLAN.md` | Plan de la session (3 actes, argumentaire, minutage) — la logique éditoriale du deck |
 | `SCENARIOS.md` | Scripts des 3 lives + filets + checklist jour J |
 | `Dockerfile.render` | Image LibreOffice headless (avec Carlito/Caladea, substituables métriquement compatibles de Calibri/Cambria) pour le rendu PDF |
-| `package.json` | Dépendance npm : `pptxgenjs` (installer via `npm install` dans ce dossier) |
+| `package.json` | Dépendances npm : `pptxgenjs` et `qrcode` (installer via `npm install` dans ce dossier) |
 
 ## Régénérer le deck (après modification de `build_deck.js`)
 
 ```bash
 cd presentation
-npm install                                    # une seule fois (pptxgenjs)
+npm install                                    # une seule fois (pptxgenjs, qrcode)
 node build_deck.js                             # écrit llm-agentique-local.pptx
 
 # Appliquer le thème (sans ça, les couleurs de thème restent celles d'Office) :
@@ -97,10 +97,9 @@ matériel ou les modèles changent :
 
 ## Avant publication / jour J
 
-- Remplacer `github.com/<vous>/llama` (slides 28 et 29) par l'URL réelle, puis
-  régénérer ; générer le QR code vers ce repo et l'insérer slide 28 (remplacer
-  le cadre en pointillés).
-- S'assurer que `demo/` est à l'état rouge : `cd demo && python3 -m unittest`
-  → 3 échecs (`git checkout -- demo/` sinon).
+- L'URL du repo public (`REPO_URL` en tête de `build_deck.js`) alimente les
+  slides 28 et 29. Le QR code de la slide 28 est généré à chaque build par le
+  paquet npm `qrcode` : changer d'URL = modifier `REPO_URL` et régénérer.
+- Remettre la démo à l'état rouge : `demo/reset.sh` → 3 échecs sur 9.
 - Rejouer les 3 lives selon `SCENARIOS.md`.
 - Le deck vit dans le repo public : c'est lui qui sert de take-away (slide 28).

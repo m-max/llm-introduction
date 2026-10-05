@@ -4,6 +4,10 @@
  * Contenu : presentation/PLAN.md — chiffres : docs/research/*.md
  */
 const pptxgen = require("pptxgenjs");
+const QRCode = require("qrcode");
+
+const REPO_URL = "https://github.com/m-max/llm-introduction";
+const REPO_SHORT = "github.com/m-max/llm-introduction";
 
 const THEME = {
   name: "Local Terminal",
@@ -905,9 +909,10 @@ s.addNotes("Punchline (1 min). Laisser « RIEN » seul à l'écran. Retour au ho
 
 // Chez vous ce soir
 s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_CLO });
-s.addText("Chez vous ce soir — trois commandes", { placeholder: "title" });
+s.addText("Chez vous ce soir", { placeholder: "title" });
 codeBlock(s, 0.6, 1.5, 7.6, 2.3, [
-  { t: "$ git clone <le repo de cette présentation>", c: GREEN },
+  { t: "$ git clone " + REPO_URL, c: GREEN },
+  { t: "$ cd llm-introduction", c: CODEFG },
   { t: "$ docker compose build", c: CODEFG },
   { t: "$ docker compose run --rm llama bash", c: CODEFG },
   { t: "  # hf download <modèle> --local-dir /models/<modèle>", c: CODEDIM },
@@ -916,9 +921,13 @@ codeBlock(s, 0.6, 1.5, 7.6, 2.3, [
 textCard(s, 0.6, 4.05, 7.6, 1.4, null, [
   { t: "Le repo contient tout : conteneur llama.cpp, démo avec son bug, skill explain-file, config OpenCode, notes de recherche et mesures.", c: INK },
 ], { fontSize: 15 });
-s.addShape(pres.ShapeType.roundRect, { x: 8.9, y: 1.6, w: 3.6, h: 3.6, rectRadius: 0.1, fill: { color: WHITE }, line: { color: INK, width: 1.5, dashType: "dash" } });
-s.addText("QR → repo public\ngithub.com/<vous>/llama\n\n(à générer avant le jour J)", {
-  x: 9.1, y: 1.85, w: 3.2, h: 3.1, margin: 0, align: "center", valign: "middle", fontFace: SANS, fontSize: 14, color: MUTED,
+card(s, 8.9, 1.5, 3.83, 4.4, WHITE);
+const slideRepo = s; // le QR code y est ajouté à la fin (génération asynchrone)
+s.addText(REPO_SHORT, {
+  x: 8.9, y: 5.0, w: 3.83, h: 0.4, margin: 0, align: "center", fontFace: SANS, fontSize: 13, bold: true, color: TEAL,
+});
+s.addText("public · licence MIT", {
+  x: 8.9, y: 5.38, w: 3.83, h: 0.35, margin: 0, align: "center", fontFace: SANS, fontSize: 12, color: MUTED,
 });
 s.addNotes("Take-away (1 min). Le QR mène au repo public. La démo est rejouable chez soi, bug compris, et toutes les mesures du talk sont dans docs/research.");
 
@@ -928,9 +937,14 @@ s.addText("Merci.", { placeholder: "title" });
 s.addText("Place aux questions — et si le serveur tient, à une démo improvisée.", {
   x: 0.9, y: 4.3, w: 11.5, h: 0.6, margin: 0, fontFace: SANS, fontSize: 20, color: ON_DARK_MUT,
 });
-s.addText("repo : github.com/<vous>/llama · licence MIT · tout est rejouable", {
+s.addText("repo : " + REPO_SHORT + " · licence MIT · tout est rejouable", {
   x: 0.9, y: 6.6, w: 11.5, h: 0.4, margin: 0, fontFace: SANS, fontSize: 13, color: ON_DARK_MUT,
 });
 s.addNotes("Q&A. Proposer de prolonger les lives à la demande (« et si on essayait sur VOTRE projet ? »).");
 
-pres.writeFile({ fileName: "llm-agentique-local.pptx" }).then(() => console.log("OK écrit"));
+QRCode.toDataURL(REPO_URL, { errorCorrectionLevel: "M", margin: 1, width: 720, color: { dark: "#" + INK + "FF", light: "#FFFFFFFF" } })
+  .then((dataUrl) => {
+    slideRepo.addImage({ data: dataUrl.replace(/^data:/, ""), x: 9.27, y: 1.75, w: 3.1, h: 3.1, altText: "QR code vers " + REPO_URL });
+    return pres.writeFile({ fileName: "llm-agentique-local.pptx" });
+  })
+  .then(() => console.log("OK écrit"));
