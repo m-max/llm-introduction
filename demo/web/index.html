@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket de caisse</title>
+<style>
+  :root {
+    --ink: #1b2437; --muted: #5a6b85; --tint: #eaf0f6; --line: #d3dce6;
+    --green: #02c39a; --teal: #028090; --amber: #f5a623; --red: #c0392b;
+    --bg: #f6f8fb; --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border-radius: 14px; padding: 24px;
+          box-shadow: 0 1px 3px rgba(27, 36, 55, .12); }
+  h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase;
+       color: var(--teal); margin: 0 0 16px; }
+  .produit { display: flex; align-items: center; justify-content: space-between;
+             padding: 10px 0; border-bottom: 1px solid var(--tint); gap: 12px; }
+  .produit:last-child { border-bottom: 0; }
+  .prix { color: var(--muted); font-variant-numeric: tabular-nums; }
+  input[type=number] { width: 64px; padding: 6px 8px; font: inherit; text-align: right;
+                       border: 1px solid var(--line); border-radius: 8px; }
+  .banniere { margin: 0 0 20px; padding: 14px 16px; border-radius: 12px;
+              background: var(--ink); color: #fff; font-weight: 600; }
+  .banniere b { color: var(--green); }
+  .jauge { position: relative; height: 10px; background: var(--tint);
+           border-radius: 5px; margin: 8px 0 44px; }
+  .jauge .rempli { position: absolute; inset: 0 auto 0 0; background: var(--green);
+                   border-radius: 5px; transition: width .2s; }
+  .jauge .cran { position: absolute; top: -4px; width: 2px; height: 18px; background: var(--ink); }
+  .jauge .cran span { position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+                      font-size: 12px; line-height: 1.25; text-align: center; color: var(--muted); white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td { padding: 8px 0; }
+  td:last-child { text-align: right; }
+  tr.total td { border-top: 2px solid var(--ink); font-size: 20px; font-weight: 700; padding-top: 12px; }
+  .ecart { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px;
+           background: var(--red); color: #fff; font-size: 13px; font-weight: 600; }
+  .alerte { margin-top: 20px; padding: 14px 16px; border-radius: 12px; font-weight: 600; }
+  .alerte.ko { background: #fdecea; color: var(--red); }
+  .alerte.ok { background: #e6f9f4; color: #027a61; }
+  .attendu { color: var(--muted); font-size: 14px; font-weight: 400; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ticket de caisse</h1>
+  <p class="sub">Démo agentique — la page relit <code>pricing.py</code> à chaque calcul.</p>
+  <div class="grid">
+    <section class="card">
+      <h2>Panier</h2>
+      <div id="produits"></div>
+    </section>
+    <section class="card">
+      <h2>Ticket</h2>
+      <div class="banniere" id="banniere"></div>
+      <div class="jauge" id="jauge"><div class="rempli" id="rempli"></div></div>
+      <table id="ticket"></table>
+      <div class="alerte" id="alerte" hidden></div>
+    </section>
+  </div>
+</main>
+<script>
+const eur = c => (c / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+const eur0 = c => (c / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+const pct = t => Math.round(t * 100) + " %";
+const MAX = 250_00;
+let catalogue = [];
+
+async function init() {
+  catalogue = await (await fetch("/api/catalogue")).json();
+  document.getElementById("produits").innerHTML = catalogue.map(p => `
+    <label class="produit">
+      <span>${p.nom}<br><span class="prix">${eur(p.prix)}</span></span>
+      <input type="number" min="0" max="20" value="${p.qte}" data-id="${p.id}">
+    </label>`).join("");
+  document.querySelectorAll("input").forEach(i => i.addEventListener("input", calculer));
+  calculer();
+}
+
+async function calculer() {
+  const lignes = catalogue.map(p => [p.prix,
+    Math.max(0, parseInt(document.querySelector(`[data-id=${p.id}]`).value) || 0)]);
+  const rep = await fetch("/api/ticket", { method: "POST", body: JSON.stringify({ lignes }) });
+  const t = await rep.json();
+  const alerte = document.getElementById("alerte");
+  if (!rep.ok) {
+    alerte.hidden = false; alerte.className = "alerte ko";
+    alerte.textContent = "pricing.py ne répond pas : " + t.erreur;
+    return;
+  }
+  const prochain = t.paliers.find(p => t.sous_total < p.seuil);
+  const suite = prochain ? `Plus que ${eur(prochain.seuil - t.sous_total)} pour -${pct(prochain.taux)}.` : "";
+  document.getElementById("banniere").innerHTML = t.attendu.taux > 0
+    ? `🎉 Votre remise : <b>-${pct(t.attendu.taux)}</b> sur tout le panier. ${suite}`
+    : `🛒 ${suite}`;
+  document.getElementById("jauge").querySelectorAll(".cran").forEach(c => c.remove());
+  t.paliers.forEach(p => {
+    const c = document.createElement("div");
+    c.className = "cran"; c.style.left = (p.seuil / MAX * 100) + "%";
+    c.innerHTML = `<span>${eur0(p.seuil)}<br>-${pct(p.taux)}</span>`;
+    document.getElementById("jauge").appendChild(c);
+  });
+  document.getElementById("rempli").style.width = Math.min(100, t.sous_total / MAX * 100) + "%";
+
+  const ko = t.taux !== t.attendu.taux || t.total_ttc !== t.attendu.total_ttc;
+  document.getElementById("ticket").innerHTML = `
+    <tr><td>Sous-total</td><td>${eur(t.sous_total)}</td></tr>
+    <tr><td>Remise (${pct(t.taux)})${t.taux !== t.attendu.taux
+        ? `<span class="ecart">annoncé ${pct(t.attendu.taux)}</span>` : ""}</td>
+        <td>-${eur(t.remise)}</td></tr>
+    <tr><td>TVA 20 %</td><td>${eur(t.tva)}</td></tr>
+    <tr class="total"><td>Total TTC</td><td>${eur(t.total_ttc)}${ko
+        ? `<br><span class="attendu">attendu : ${eur(t.attendu.total_ttc)}</span>` : ""}</td></tr>`;
+  alerte.hidden = false;
+  alerte.className = "alerte " + (ko ? "ko" : "ok");
+  alerte.textContent = ko
+    ? `⚠ Le ticket ne respecte pas la remise annoncée : ${eur(t.total_ttc - t.attendu.total_ttc)} facturés en trop.`
+    : "✓ Ticket conforme à la remise annoncée.";
+}
+
+init();
+</script>
+</body>
+</html>

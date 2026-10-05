@@ -135,8 +135,9 @@ ce serveur avec `--host 0.0.0.0`).
 - [`presentation/`](presentation/) — le deck **`llm-agentique-local.pptx`** (+ son PDF),
   son script de fabrication (`build_deck.js`), le plan détaillé de la session
   (`PLAN.md`) et les scripts des lives (`SCENARIOS.md`) ;
-- [`demo/`](demo/) — un mini-projet Python avec un bug volontaire : la démo
-  agentique (l'agent d'OpenCode doit rendre les tests verts) ;
+- [`demo/`](demo/) — un mini-projet Python avec un bug volontaire, rendu
+  visible par une page « ticket de caisse » (`python3 demo/web/server.py`) :
+  la démo agentique (l'agent d'OpenCode corrige le ticket client) ;
 - [`.opencode/skills/explain-file/`](.opencode/skills/explain-file/SKILL.md) —
   la skill écrite en direct pendant la troisième partie, qui explique un fichier
   de code en moins de vingt lignes.

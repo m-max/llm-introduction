@@ -293,20 +293,26 @@ pourquoi ça marche ? »
    - punchline : **« Le modèle et le harnais ne se connaissent que par une
      base URL. »**
 
-**⚡ Live 2 — OpenCode corrige un bug, 100 % local (10 min)** :
+**⚡ Live 2 — Un ticket client corrigé par l'agent, 100 % local (10 min)** :
 
-- Mini-projet `demo/` : 3 tests rouges sur 9
-  (cf. [`demo/README.md`](../demo/README.md)).
-- Prompt : « Les tests de demo/ sont rouges, rends-les verts. »
-- Commenter les appels qui défilent : `read` → `shell` → `read` → `edit` →
-  `shell`.
+- On part d'un **symptôme**, pas de tests rouges. La page « ticket de caisse »
+  de `demo/web/` affiche « Remise (9 %) — annoncé 10 % » et 1,44 € facturés
+  en trop (cf. [`demo/README.md`](../demo/README.md)).
+- Prompt : « Corrige le ticket demo/TICKET.md. » L'agent trouve lui-même le
+  code et les tests. Plan B : « Les tests de demo/ sont rouges, rends-les
+  verts. »
+- Commenter les appels qui défilent : lecture du ticket et de `pricing.py`,
+  `shell` (tests rouges), `edit`, `shell` (tests verts).
 - En parallèle, afficher le log du serveur : `prompt eval time … / eval
   time …`. On voit le cache travailler (prompt_n petit, cache_n grand).
+- Rafraîchir la page : elle passe au vert, sans redémarrage, car elle relit
+  `pricing.py` à chaque calcul.
 - `git diff` : une seule valeur, `0.09` → `0.10`. « Il n'a pas deviné : il a
   mesuré. »
 - **Punchline** : `curl /metrics`. 4,4 M tokens de prompt servis par ce
   serveur pendant la préparation du talk, 94,6 % depuis le cache, et rien
   n'a quitté le LAN.
+- Remise à zéro entre deux répétitions : `demo/reset.sh`.
 
 8. **Étendre sans coder** :
    - `AGENTS.md` : la v2 ne lit plus `CLAUDE.md` ;

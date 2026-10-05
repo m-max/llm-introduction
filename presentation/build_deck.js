@@ -769,10 +769,10 @@ s.addNotes("Branchement (2 min). La config réelle, pas un slide marketing : ~30
 // Live 2
 s = pres.addSlide({ masterName: "MASTER_LIVE", sectionTitle: S_A2 });
 liveBadge(s);
-s.addText("OpenCode corrige un bug, 100 % local", { placeholder: "title" });
-step(s, 1, 0.9, 2.95, 5.6, "Le constat", "python3 -m unittest dans demo/ : 9 tests, 3 rouges. Un bug de facturation. Je ne dis pas où.", true);
-step(s, 2, 0.9, 4.15, 5.6, "L'agent travaille", "read → shell → read → edit → shell. Et le log du serveur montre le cache au travail.", true);
-step(s, 3, 0.9, 5.35, 5.6, "git diff", "Une seule valeur change. « Il n'a pas deviné : il a mesuré. »", true);
+s.addText("Un ticket client corrigé par l'agent, 100 % local", { placeholder: "title" });
+step(s, 1, 0.9, 2.95, 5.6, "Le symptôme", "Page ticket : « Remise (9 %) — annoncé 10 % », 1,44 € facturés en trop. L'agent reçoit seulement TICKET.md.", true);
+step(s, 2, 0.9, 4.15, 5.6, "L'agent enquête", "ticket → pricing.py → tests rouges → edit → tests verts. Le log serveur montre le cache au travail.", true);
+step(s, 3, 0.9, 5.35, 5.6, "F5, puis git diff", "La page passe au vert. Une seule valeur a changé : « il n'a pas deviné, il a mesuré ».", true);
 codeBlock(s, 6.9, 2.95, 5.6, 2.1, [
   { t: "$ curl -s 192.168.0.110:8080/metrics", c: GREEN },
   { t: "prompt_tokens_total          239 162", c: CODEFG },
@@ -784,7 +784,7 @@ s.addText([
   { text: "94,6 % depuis le cache. Rien n'a quitté le LAN.", options: { color: GREEN, bold: true } },
 ], { x: 6.9, y: 5.2, w: 5.6, h: 1.1, margin: 0, fontFace: SANS, fontSize: 15, valign: "top" });
 actDots(s, 1, 6.6);
-s.addNotes("LIVE 2 (10 min). Script : SCENARIOS.md. Ne PAS révéler le bug avant le git diff. Pendant que l'agent travaille, montrer le log serveur : prompt eval time petit (seul le suffixe est recalculé) grâce au cache. Punchline : curl /metrics — chiffres du jour à relever avant la session (compteurs cumulés depuis le démarrage du serveur).");
+s.addNotes("LIVE 2 (10 min). Script : SCENARIOS.md. Avant : demo/reset.sh et python3 demo/web/server.py (http://127.0.0.1:8000). Prompt : « Corrige le ticket demo/TICKET.md. » (plan B : « Les tests de demo/ sont rouges, rends-les verts. »). Ne PAS révéler le bug avant le git diff. Pendant que l'agent travaille, montrer le log serveur : prompt eval time petit (seul le suffixe est recalculé) grâce au cache. Punchline : curl /metrics — chiffres du jour à relever avant la session (compteurs cumulés depuis le démarrage du serveur).");
 
 // Étendre
 s = pres.addSlide({ masterName: "MASTER_CONTENU", sectionTitle: S_A2 });

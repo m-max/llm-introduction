@@ -59,36 +59,62 @@ pour les citer.
 
 ---
 
-## Live 2 — OpenCode corrige un bug, 100 % local (10 min, acte 2)
+## Live 2 — Un ticket client corrigé par l'agent, 100 % local (10 min, acte 2)
 
 **Prouver** :
 
-- la boucle (lire → outil → résultat → re-boucle) sur un modèle 100 % local ;
+- la boucle (lire → outil → résultat → re-boucle) sur un modèle 100 % local,
+  à partir d'un **symptôme client**, pas d'une suite de tests ;
 - le cache de prompt au travail.
 
-**Disposition** : deux fenêtres. OpenCode à gauche. À droite, le log de
-`llama-server` sur le serveur (`ssh` + `journalctl -f` ou `docker logs -f`,
-selon l'installation), ou à défaut `watch curl …/slots`.
+**Disposition** :
+
+- navigateur sur <http://127.0.0.1:8000> (ticket de caisse) ;
+- OpenCode à gauche ;
+- à droite, le log de `llama-server` (`ssh` + `journalctl -f` ou
+  `docker logs -f` selon l'installation), ou à défaut `watch curl …/slots`.
 
 | # | Écran | Geste | Ce qu'on dit |
 |---|-------|-------|--------------|
-| 1 | Terminal | `python3 -m unittest` dans `demo/` → 3 rouges sur 9 | « Un panier de facturation, trois tests qui échouent. Où est le bug ? Je ne vous le dis pas. » |
-| 2 | OpenCode | Prompt : « Les tests de demo/ sont rouges, rends-les verts. » | Commenter les appels qui défilent : `read` → `shell` → `read` → `edit` → `shell`. |
-| 3 | Log serveur | Pointer `prompt eval time = … / N tokens` à chaque tour | « Il ne recalcule que la fin du prompt : le début est dans le cache. » |
-| 4 | OpenCode | Tests verts | « Il n'a pas deviné : il a mesuré. » |
-| 5 | Terminal | `git diff` : une valeur, `0.09` → `0.10` | Révéler le bug seulement maintenant. |
-| 6 | Terminal | `curl -s http://192.168.0.110:8080/metrics \| grep -E "prompt_tokens_(total\|cached_total)\|predicted_tokens_seconds"` | Punchline : « Des millions de tokens de prompt servis par ce serveur pendant la préparation du talk, 9 sur 10 depuis le cache. Rien n'a quitté le LAN. » |
+| 1 | Navigateur | Page ticket, panier par défaut (3 claviers) | « Un client se plaint : la bannière promet -10 %, le ticket applique 9 %. 1,44 € facturés en trop. » |
+| 2 | Éditeur | Montrer `demo/TICKET.md` | « Voilà tout ce que l'agent va recevoir. Je ne sais pas où est le bug. » |
+| 3 | OpenCode | Prompt : « Corrige le ticket demo/TICKET.md. » | Commenter les appels qui défilent : lecture du ticket, de `pricing.py`, des tests, `shell` (tests rouges), `edit`, `shell` (tests verts). |
+| 4 | Log serveur | Pointer `prompt eval time = … / N tokens` à chaque tour | « Il ne recalcule que la fin du prompt : le début est dans le cache. » |
+| 5 | Navigateur | Rafraîchir la page | Le badge « annoncé 10 % » disparaît, l'alerte passe au vert : « Ticket conforme ». |
+| 6 | Terminal | `git diff` : une valeur, `0.09` → `0.10` | Révéler le bug seulement maintenant. « Il n'a pas deviné : il a mesuré. » |
+| 7 | Terminal | `curl -s http://192.168.0.110:8080/metrics \| grep -E "prompt_tokens_(total\|cached_total)\|predicted_tokens_seconds"` | Punchline : « Des millions de tokens de prompt servis par ce serveur pendant la préparation du talk, 9 sur 10 depuis le cache. Rien n'a quitté le LAN. » |
 
-**Calibration** : le bug (une valeur dans `PALIERS`, la docstring sert de
-spec) est calibré pour quelques tool calls. Vérifié : 3 échecs sur 9 tests,
-vert en une correction. Ne PAS révéler l'emplacement du bug avant l'étape 5.
+**Avant le live** :
+
+- `demo/reset.sh` ;
+- `python3 demo/web/server.py` lancé dans un terminal dédié : la page relit
+  `pricing.py` à chaque calcul, inutile de la redémarrer.
+
+`demo/AGENTS.md` dit à l'agent de ne pas lancer le serveur (processus
+bloquant) et de vérifier avec `python3 -m unittest`.
+
+**Calibration** :
+
+- le bug est une valeur dans `PALIERS` ; la docstring sert de spec ;
+- vérifié : 3 échecs sur 9 tests, vert en une correction ;
+- le passage par le ticket ajoute 1 à 2 appels d'outils par rapport à
+  « rends les tests verts ». **À chronométrer en répétition** ;
+- ne PAS révéler l'emplacement du bug avant l'étape 6 ;
+- si l'agent tente de lancer `web/server.py` malgré `AGENTS.md`,
+  l'interrompre (Échap) et le relancer.
+
+**Plan B (temps serré)** : prompt « Les tests de demo/ sont rouges, rends-les
+verts. », puis rafraîchir la page à la fin.
 
 **Chiffres `/metrics`** : les compteurs sont cumulés depuis le démarrage du
 serveur. Relever les valeurs le matin même et mettre à jour la slide 21 (sur
 la base du 05/10/2026 : 4 212 240 cachés / 239 162 calculés = 94,6 %).
 
-**Filet** : le serveur fonctionne sans Internet, seul le LAN compte. Garder
-les captures d'une session de répétition.
+**Filet** :
+
+- le serveur fonctionne sans Internet, seul le LAN compte ;
+- captures d'une session de répétition, dont la page ticket rouge puis
+  verte.
 
 ---
 
@@ -134,8 +160,9 @@ dérape ; capture de l'invocation.
       jour les slides 8, 19 et 21 si les chiffres ont bougé
 - [ ] Remesurer `llama-bench -p 512 -n 128 -t 6,14` sur le laptop (slides 8
       et 9)
-- [ ] `demo/` à l'état rouge : `python3 -m unittest` → 3 échecs
-      (`git checkout -- demo/` si besoin)
+- [ ] `demo/reset.sh` → « ✓ démo prête : 3 tests rouges sur 9 »
+- [ ] `python3 demo/web/server.py` lancé, page <http://127.0.0.1:8000>
+      ouverte (badge « annoncé 10 % » visible)
 - [ ] Skill `explain-file` : l'effacer pour la réécrire en live, ou montrer
       la version committée
 - [ ] Captures de secours des 3 lives dans `presentation/fallback/`
